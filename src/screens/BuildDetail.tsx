@@ -1,20 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { Build, Part, PartStatus } from '../types.ts';
 import {
   STAGES,
   STATIONS,
+  STATUS_LABEL,
   STATUS_TOKENS,
   batchGroups,
   buildUpdatedAt,
   countByStatus,
   curingParts,
   daysUntil,
-  forwardSteps,
+  groupLinked,
   isHandsOff,
+  linkGroup,
   nextStatus,
+  otherSteps,
   partTime,
   partsDone,
   shortDate,
+  sortByProgress,
   suggestedNextStep,
   timeAgo,
   timeLeft,
@@ -38,6 +42,13 @@ const stationOf = (status: PartStatus) => STATIONS.find((st) => st.status === st
 /** Bars read against each other, not against the column: +8px a part, capped. */
 const barHeight = (count: number) => (count === 0 ? 5 : Math.min(62, 4 + 8 * count));
 
+const LinkIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+    <path d="M10 14a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1" />
+    <path d="M14 10a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1" />
+  </svg>
+);
+
 export function BuildDetail({
   build,
   builds,
@@ -50,6 +61,7 @@ export function BuildDetail({
   onRename,
   onNote,
   onDelete,
+  onLinkPart,
 }: {
   build: Build;
   builds: Build[];
@@ -62,9 +74,11 @@ export function BuildDetail({
   onRename: (id: string) => void;
   onNote: (id: string) => void;
   onDelete: (id: string) => void;
+  onLinkPart: (id: string) => void;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [filter, setFilter] = useState<'all' | 'needs' | 'done'>('all');
+  const [sortMode, setSortMode] = useState<'recent' | 'progress'>('recent');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -103,9 +117,11 @@ export function BuildDetail({
     : 0;
   const waiting = curingParts([build]);
 
-  const filtered = build.parts.filter((p) =>
+  const byFilter = build.parts.filter((p) =>
     filter === 'all' ? true : filter === 'done' ? p.status === 'done' : p.status !== 'done',
   );
+  // Linked pairs are pulled adjacent last, after ordering — pairing wins over strict progress order.
+  const filtered = groupLinked(sortMode === 'progress' ? sortByProgress(byFilter) : byFilter);
   const visible = showAll ? filtered : filtered.slice(0, PAGE);
 
   const picked = build.parts.filter((p) => selected.includes(p.id));
@@ -122,6 +138,136 @@ export function BuildDetail({
     onAdvance(selected);
     setSelected([]);
   };
+
+  const renderRow = (part: Part, links: Part[]): ReactNode => {
+    const isDone = part.status === 'done';
+    const isSelected = selected.includes(part.id);
+    const outOfStep = links.filter((l) => l.status !== part.status);
+    return (
+      <div
+        key={part.id}
+        className={`${s.row} ${isSelected ? s.rowSelected : ''} ${isDone ? s.rowDone : ''}`}
+      >
+        <button
+          className={`${s.check} ${isSelected ? s.checkOn : ''} ${isDone ? s.checkDone : ''}`}
+          disabled={isDone}
+          aria-label={`Select ${part.name}`}
+          onClick={() => toggle(part)}
+        >
+          {isDone && <span />}
+        </button>
+        <div className={s.partInfo}>
+          <span className={s.nameLine}>
+            <span className={s.partName}>{part.name}</span>
+            {links.length > 0 && (
+              <span
+                className={`${s.linkBadge} ${outOfStep.length ? s.linkBadgeOff : ''}`}
+                title={
+                  outOfStep.length === 0
+                    ? `Linked to ${links.map((l) => l.name).join(', ')} — same step`
+                    : `Linked to ${links.map((l) => l.name).join(', ')} — catch up: ${outOfStep
+                        .map((l) => `${l.name} (${STATUS_LABEL[l.status]})`)
+                        .join(', ')}`
+                }
+              >
+                <LinkIcon />
+              </span>
+            )}
+          </span>
+          {part.note && <span className={s.partNote}>{part.note}</span>}
+        </div>
+        <StatusPill status={part.status} />
+        <span className={s.stamp}>{partTime(part)}</span>
+        <button
+          className={`${s.advance} ${openMenu === part.id ? s.advanceOpen : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpenMenu(openMenu === part.id ? null : part.id);
+          }}
+        >
+          Advance <span>▾</span>
+        </button>
+        {openMenu === part.id && (
+          <div className={s.menu} onClick={(e) => e.stopPropagation()}>
+            <div className={s.menuKicker}>MOVE TO STEP</div>
+            {otherSteps(part.status).map((status) => (
+              <button
+                key={status}
+                className={`${s.menuItem} ${status === nextStatus(part.status) ? s.menuNext : ''}`}
+                onClick={() => {
+                  onMove([part.id], status);
+                  setOpenMenu(null);
+                }}
+              >
+                <span className={s.menuDot} style={{ background: STATUS_TOKENS[status].solid }} />
+                {status === 'queued' ? 'Back to queue' : label(status)}
+                {status === nextStatus(part.status) && <span className={s.menuTag}>next</span>}
+              </button>
+            ))}
+            <div className={s.menuRule} />
+            <button
+              className={s.menuItem}
+              onClick={() => {
+                onRename(part.id);
+                setOpenMenu(null);
+              }}
+            >
+              Rename part
+            </button>
+            <button
+              className={s.menuItem}
+              onClick={() => {
+                onNote(part.id);
+                setOpenMenu(null);
+              }}
+            >
+              Notes &amp; details
+            </button>
+            <button
+              className={s.menuItem}
+              onClick={() => {
+                onLinkPart(part.id);
+                setOpenMenu(null);
+              }}
+            >
+              {links.length ? `Edit link (${links.length + 1})` : 'Link part'}
+            </button>
+            <button
+              className={`${s.menuItem} ${s.menuDanger}`}
+              onClick={() => {
+                onDelete(part.id);
+                setOpenMenu(null);
+              }}
+            >
+              Delete part
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const rows: ReactNode[] = [];
+  for (let i = 0; i < visible.length; i++) {
+    const part = visible[i];
+    if (part.linkGroupId && visible[i + 1]?.linkGroupId === part.linkGroupId) {
+      const run = [part];
+      let j = i + 1;
+      while (j < visible.length && visible[j].linkGroupId === part.linkGroupId) {
+        run.push(visible[j]);
+        j++;
+      }
+      rows.push(
+        <div key={`group-${part.id}`} className={s.linkGroup}>
+          <div className={s.linkBracket} />
+          {run.map((rp) => renderRow(rp, linkGroup(build, rp)))}
+        </div>,
+      );
+      i = j - 1;
+    } else {
+      rows.push(renderRow(part, linkGroup(build, part)));
+    }
+  }
 
   return (
     <div className={ui.page}>
@@ -254,6 +400,13 @@ export function BuildDetail({
             >
               Done {done}
             </button>
+            <button
+              className={s.sortToggle}
+              onClick={() => setSortMode((m) => (m === 'recent' ? 'progress' : 'recent'))}
+              title="Sort by how far along each part is — done parts sink to the bottom"
+            >
+              Sort: {sortMode === 'progress' ? 'Progress' : 'Recent'}
+            </button>
           </div>
         </div>
 
@@ -272,99 +425,7 @@ export function BuildDetail({
         )}
 
         <div className={s.rows}>
-          {visible.map((part) => {
-            const isDone = part.status === 'done';
-            const isSelected = selected.includes(part.id);
-            return (
-              <div
-                key={part.id}
-                className={`${s.row} ${isSelected ? s.rowSelected : ''} ${isDone ? s.rowDone : ''}`}
-              >
-                <button
-                  className={`${s.check} ${isSelected ? s.checkOn : ''} ${isDone ? s.checkDone : ''}`}
-                  disabled={isDone}
-                  aria-label={`Select ${part.name}`}
-                  onClick={() => toggle(part)}
-                >
-                  {isDone && <span />}
-                </button>
-                <div className={s.partInfo}>
-                  <span className={s.partName}>{part.name}</span>
-                  {part.note && <span className={s.partNote}>{part.note}</span>}
-                </div>
-                <StatusPill status={part.status} />
-                <span className={s.stamp}>{partTime(part)}</span>
-                <button
-                  className={`${s.advance} ${openMenu === part.id ? s.advanceOpen : ''}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenMenu(openMenu === part.id ? null : part.id);
-                  }}
-                >
-                  Advance <span>▾</span>
-                </button>
-                {openMenu === part.id && (
-                  <div className={s.menu} onClick={(e) => e.stopPropagation()}>
-                    <div className={s.menuKicker}>MOVE TO STEP</div>
-                    {forwardSteps(part.status).map((status) => (
-                      <button
-                        key={status}
-                        className={`${s.menuItem} ${status === nextStatus(part.status) ? s.menuNext : ''}`}
-                        onClick={() => {
-                          onMove([part.id], status);
-                          setOpenMenu(null);
-                        }}
-                      >
-                        <span className={s.menuDot} style={{ background: STATUS_TOKENS[status].solid }} />
-                        {label(status)}
-                        {status === nextStatus(part.status) && <span className={s.menuTag}>next</span>}
-                      </button>
-                    ))}
-                    {part.status !== 'queued' && (
-                      <button
-                        className={s.menuItem}
-                        onClick={() => {
-                          onMove([part.id], 'queued');
-                          setOpenMenu(null);
-                        }}
-                      >
-                        <span className={s.menuDot} style={{ background: STATUS_TOKENS.queued.solid }} />
-                        Back to queue
-                      </button>
-                    )}
-                    <div className={s.menuRule} />
-                    <button
-                      className={s.menuItem}
-                      onClick={() => {
-                        onRename(part.id);
-                        setOpenMenu(null);
-                      }}
-                    >
-                      Rename part
-                    </button>
-                    <button
-                      className={s.menuItem}
-                      onClick={() => {
-                        onNote(part.id);
-                        setOpenMenu(null);
-                      }}
-                    >
-                      Notes &amp; details
-                    </button>
-                    <button
-                      className={`${s.menuItem} ${s.menuDanger}`}
-                      onClick={() => {
-                        onDelete(part.id);
-                        setOpenMenu(null);
-                      }}
-                    >
-                      Delete part
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {rows}
           {!showAll && filtered.length > PAGE && (
             <button className={s.showMore} onClick={() => setShowAll(true)}>
               Show {filtered.length - PAGE} more parts

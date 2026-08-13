@@ -17,6 +17,7 @@ export interface Part {
   updatedAt: string; // ISO
   note?: string;
   curingUntil?: string; // ISO — part is hands-off until this time (also a running print)
+  linkGroupId?: string; // parts sharing this id are one assembly and should stay in step
 }
 
 export interface Build {

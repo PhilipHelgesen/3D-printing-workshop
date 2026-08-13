@@ -225,3 +225,109 @@
   opacity: 0.5;
   cursor: default;
 }
+
+.linkedRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--field);
+  border-radius: var(--radius-field);
+  padding: 10px 12px;
+}
+
+.linkedDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.linkedName {
+  flex: 1;
+  min-width: 0;
+  font: 700 12.5px var(--font-sans);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unlink {
+  font: 700 11px var(--font-sans);
+  color: var(--terra);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex: none;
+}
+
+.linkList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.linkOption {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: transparent;
+  border: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.linkOption:hover {
+  background: var(--ground);
+}
+
+.linkOptionOn {
+  background: var(--sea-tint);
+}
+
+.linkOptionOn:hover {
+  background: var(--sea-tint);
+}
+
+.linkCheck {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  flex: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.linkCheckOn {
+  background: var(--sea);
+  border-color: var(--sea);
+}
+
+.linkOptionName {
+  flex: 1;
+  min-width: 0;
+  font: 600 12.5px var(--font-sans);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linkOptionStatus {
+  font: 600 10px var(--font-mono);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  flex: none;
+}
+
+.linkEmpty {
+  font: 400 11.5px var(--font-mono);
+  color: var(--muted);
+  padding: 8px 4px;
+}

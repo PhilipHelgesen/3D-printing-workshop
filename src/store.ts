@@ -6,6 +6,13 @@ import { ROW_ID, supabase } from './supabase.ts';
 
 const KEY = 'nozzle.v1';
 
+/** A link group of one part is meaningless — clear it so a lone leftover doesn't show a badge. */
+function pruneLoneGroups(parts: Part[]): Part[] {
+  const counts = new Map<string, number>();
+  for (const p of parts) if (p.linkGroupId) counts.set(p.linkGroupId, (counts.get(p.linkGroupId) ?? 0) + 1);
+  return parts.map((p) => (p.linkGroupId && (counts.get(p.linkGroupId) ?? 0) < 2 ? { ...p, linkGroupId: undefined } : p));
+}
+
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY);
@@ -149,7 +156,45 @@ export function useStore() {
       (id: string) =>
         setState((s) => ({
           ...s,
-          builds: s.builds.map((b) => ({ ...b, parts: b.parts.filter((p) => p.id !== id) })),
+          builds: s.builds.map((b) => ({ ...b, parts: pruneLoneGroups(b.parts.filter((p) => p.id !== id)) })),
+        })),
+      [],
+    ),
+    /**
+     * Puts every id in one assembly. If any already belong to a group, that whole
+     * group comes along too (touching two different groups merges them into one).
+     */
+    linkParts: useCallback(
+      (ids: string[]) =>
+        setState((s) => {
+          const allParts = s.builds.flatMap((b) => b.parts);
+          const members = new Set(ids);
+          const touchedGroups = new Set(
+            allParts.filter((p) => members.has(p.id) && p.linkGroupId).map((p) => p.linkGroupId!),
+          );
+          if (touchedGroups.size) {
+            for (const p of allParts) if (p.linkGroupId && touchedGroups.has(p.linkGroupId)) members.add(p.id);
+          }
+          const groupId = touchedGroups.size === 1 ? [...touchedGroups][0] : crypto.randomUUID();
+          return {
+            ...s,
+            builds: s.builds.map((b) => ({
+              ...b,
+              parts: b.parts.map((p) => (members.has(p.id) ? { ...p, linkGroupId: groupId } : p)),
+            })),
+          };
+        }),
+      [],
+    ),
+    /** Pulls one part out of its assembly. If that leaves a lone member behind, its badge clears too. */
+    removeFromGroup: useCallback(
+      (id: string) =>
+        setState((s) => ({
+          ...s,
+          builds: s.builds.map((b) => ({
+            ...b,
+            parts: pruneLoneGroups(b.parts.map((p) => (p.id === id ? { ...p, linkGroupId: undefined } : p))),
+          })),
         })),
       [],
     ),

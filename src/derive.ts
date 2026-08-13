@@ -95,9 +95,8 @@ export function progressColor(b: Build): string {
 export const nextStatus = (s: PartStatus): PartStatus =>
   PIPELINE[Math.min(PIPELINE.indexOf(s) + 1, PIPELINE.length - 1)];
 
-/** Steps offered by the Advance ▾ menu: everything still ahead of the part. */
-export const forwardSteps = (s: PartStatus): PartStatus[] =>
-  PIPELINE.slice(PIPELINE.indexOf(s) + 1);
+/** Steps offered by the Advance ▾ menu: every other step, in pipeline order — rework can jump either way. */
+export const otherSteps = (s: PartStatus): PartStatus[] => PIPELINE.filter((status) => status !== s);
 
 const lower = (name: string) => name.charAt(0).toLowerCase() + name.slice(1);
 
@@ -221,3 +220,31 @@ export function daysUntil(iso: string, now = Date.now()): number {
 /** Parts that are hands-off for a reason other than a running print. */
 export const curingParts = (builds: Build[], now = Date.now()) =>
   builds.flatMap((b) => b.parts.filter((p) => p.status !== 'printing' && isHandsOff(p, now)));
+
+/** The rest of a part's assembly — other parts sharing its link group, that should stay on the same step. */
+export const linkGroup = (build: Build, part: Part): Part[] =>
+  part.linkGroupId ? build.parts.filter((p) => p.id !== part.id && p.linkGroupId === part.linkGroupId) : [];
+
+/** Queued first, done last — how far each part has come through the pipeline. */
+export const sortByProgress = (parts: Part[]): Part[] =>
+  [...parts].sort((a, b) => PIPELINE.indexOf(a.status) - PIPELINE.indexOf(b.status));
+
+/** Reorders a part list so each assembly's members sit next to each other, so the UI can draw connectors between them. */
+export function groupLinked(parts: Part[]): Part[] {
+  const seen = new Set<string>();
+  const out: Part[] = [];
+  for (const p of parts) {
+    if (seen.has(p.id)) continue;
+    out.push(p);
+    seen.add(p.id);
+    if (p.linkGroupId) {
+      for (const q of parts) {
+        if (q.id !== p.id && q.linkGroupId === p.linkGroupId && !seen.has(q.id)) {
+          out.push(q);
+          seen.add(q.id);
+        }
+      }
+    }
+  }
+  return out;
+}

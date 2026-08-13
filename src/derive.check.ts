@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {
   BATCH_THRESHOLD,
   batchGroups,
-  forwardSteps,
   nextStatus,
+  otherSteps,
   partsDone,
   partsWaitingOnYou,
   progressPct,
@@ -90,8 +90,8 @@ assert.equal(Math.round(progressPct(pipboy)), 12);
 // —— the pipeline has no failure state; a broken part goes back to queued ——
 assert.equal(nextStatus('smoothing'), 'priming');
 assert.equal(nextStatus('done'), 'done');
-assert.deepEqual(forwardSteps('smoothing'), ['priming', 'painting', 'assembling', 'done']);
-assert.deepEqual(forwardSteps('done'), []);
+assert.deepEqual(otherSteps('smoothing'), ['queued', 'printing', 'priming', 'painting', 'assembling', 'done']);
+assert.deepEqual(otherSteps('done'), ['queued', 'printing', 'smoothing', 'priming', 'painting', 'assembling']);
 
 // —— stamps ——
 const ago = (ms: number) => new Date(now - ms).toISOString();

@@ -6,6 +6,7 @@ import { BuildDetail } from './screens/BuildDetail.tsx';
 import { Toolbox } from './screens/Toolbox.tsx';
 import { ToolboxModal } from './screens/ToolboxModal.tsx';
 import { AddPartModal } from './screens/AddPartModal.tsx';
+import { LinkPartModal } from './screens/LinkPartModal.tsx';
 import { type Screen } from './ui/Shell.tsx';
 
 const blankEntry = (): ToolboxEntry => ({
@@ -23,6 +24,7 @@ export default function App() {
   const [openBuildId, setOpenBuildId] = useState<string | null>(null);
   const [modal, setModal] = useState<{ entry: ToolboxEntry; isNew: boolean } | null>(null);
   const [addingPart, setAddingPart] = useState(false);
+  const [linkingPartId, setLinkingPartId] = useState<string | null>(null);
 
   const navigate = (next: Screen) => {
     setOpenBuildId(null);
@@ -61,6 +63,7 @@ export default function App() {
             const part = openBuild.parts.find((p) => p.id === id)!;
             if (window.confirm(`Delete ${part.name}?`)) store.deletePart(id);
           }}
+          onLinkPart={setLinkingPartId}
         />
       )}
 
@@ -93,6 +96,28 @@ export default function App() {
           onClose={() => setAddingPart(false)}
         />
       )}
+
+      {linkingPartId &&
+        openBuild &&
+        (() => {
+          const linkingPart = openBuild.parts.find((p) => p.id === linkingPartId)!;
+          const members = openBuild.parts.filter(
+            (p) => p.id !== linkingPartId && p.linkGroupId && p.linkGroupId === linkingPart.linkGroupId,
+          );
+          const memberIds = new Set(members.map((m) => m.id));
+          return (
+            <LinkPartModal
+              part={linkingPart}
+              members={members}
+              candidates={openBuild.parts.filter((p) => p.id !== linkingPartId && !memberIds.has(p.id))}
+              onAdd={(newIds) => {
+                store.linkParts([linkingPartId, ...members.map((m) => m.id), ...newIds]);
+              }}
+              onRemoveMember={(id) => store.removeFromGroup(id)}
+              onClose={() => setLinkingPartId(null)}
+            />
+          );
+        })()}
 
       {modal && (
         <ToolboxModal

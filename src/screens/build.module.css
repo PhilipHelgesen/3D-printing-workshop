@@ -175,6 +175,17 @@
   color: #fff;
 }
 
+.sortToggle {
+  font: 600 11px var(--font-mono);
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-chip);
+  padding: 6px 13px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
 .selectionBar {
   background: var(--sea-tint);
   border-radius: var(--radius-card);
@@ -207,6 +218,24 @@
   flex-direction: column;
   gap: 9px;
   flex: none;
+}
+
+.linkGroup {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 12px;
+}
+
+.linkBracket {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: var(--ink);
+  border-radius: 2px;
 }
 
 .row {
@@ -267,12 +296,36 @@
   gap: 1px;
 }
 
+.nameLine {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
 .partName {
+  min-width: 0;
   font: 600 13.5px var(--font-sans);
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.linkBadge {
+  flex: none;
+  display: flex;
+  align-items: center;
+  color: var(--sea-dark);
+}
+
+.linkBadge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.linkBadgeOff {
+  color: var(--lemon);
 }
 
 .partNote {
