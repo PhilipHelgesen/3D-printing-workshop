@@ -1,0 +1,68 @@
+:root {
+  /* ground & surfaces */
+  --ground: #faf3ea;
+  --surface: #ffffff;
+  --surface-sunk: #f0e4d3;
+  --field: #faf3ea;
+  --hairline: #efe3d4;
+  --border: #dbcbb5;
+  --border-dashed: #d3c2ab;
+  --track: #eadfcd; /* unfilled donut / empty stage bar */
+  --outline-soft: #a9cdd6; /* Advance ▾ resting border */
+
+  /* roles */
+  --sea: #2e7c8c;
+  --sea-dark: #1f5a67;
+  --sea-tint: #b3d9e0;
+  --lemon: #a06f05;
+  --lemon-tint: #f7e3bd;
+  --basil: #4f7268;
+  --basil-tint: #d6e3de;
+  --terra: #84572f;
+  --terra-dark: #6d4526;
+  --neutral: #a08a72;
+  --neutral-tint: #edd5c0;
+
+  /* text */
+  --ink: #3a2a1c;
+  --muted: #6d5f50;
+
+  /* type */
+  --font-sans: 'Nunito Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* radius */
+  --radius-card: 18px;
+  --radius-field: 14px;
+  --radius-chip: 999px;
+  --radius-icon: 16px;
+
+  /* elevation */
+  --shadow-row: 0 2px 8px rgba(90, 66, 40, 0.05);
+  --shadow-tile: 0 4px 12px rgba(90, 66, 40, 0.06);
+  --shadow-card: 0 6px 18px rgba(90, 66, 40, 0.07);
+  --shadow-hover: 0 8px 20px rgba(90, 66, 40, 0.14);
+  --shadow-menu: 0 14px 30px rgba(70, 50, 30, 0.16);
+  --shadow-modal: 0 26px 60px rgba(60, 42, 26, 0.32);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* all numeric figures */
+.tnum {
+  font-feature-settings: 'tnum';
+}

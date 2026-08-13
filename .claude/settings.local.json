@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node cli/install.js --only claude --no-mcp-shrink --non-interactive --dry-run)",
+      "Bash(claude plugin *)",
+      "Bash(python3 -)",
+      "Bash(npm i *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(JSON.stringify\\({d:p.dependencies,dd:p.devDependencies},null,1\\)\\)\")",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}

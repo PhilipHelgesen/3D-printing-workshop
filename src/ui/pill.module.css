@@ -1,0 +1,38 @@
+.pill,
+.pillBare {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-chip);
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.pillBare {
+  padding: 4px 11px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.count {
+  font: 600 11px var(--font-mono);
+  color: var(--ink);
+  font-feature-settings: 'tnum';
+}
+
+.label {
+  font: 600 10px var(--font-sans);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.labelBare {
+  font: 700 10px var(--font-sans);
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}

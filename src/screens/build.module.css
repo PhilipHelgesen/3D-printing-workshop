@@ -1,0 +1,395 @@
+.header {
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-card);
+  flex: none;
+}
+
+.back {
+  font: 700 11px var(--font-sans);
+  color: var(--sea);
+  letter-spacing: 0.04em;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.headRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.name {
+  font: 700 24px var(--font-sans);
+  color: var(--ink);
+  letter-spacing: -0.015em;
+}
+
+.meta {
+  font: 400 11px var(--font-mono);
+  color: var(--muted);
+  margin-top: 5px;
+}
+
+.figure {
+  font: 600 30px var(--font-mono);
+  color: var(--ink);
+  line-height: 1;
+  font-feature-settings: 'tnum';
+}
+
+.figure span {
+  font-size: 17px;
+  color: var(--muted);
+}
+
+.figureKicker {
+  font: 700 9px var(--font-sans);
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.flow {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 96px;
+  margin-top: 20px;
+}
+
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.stageWide {
+  flex: 1.5;
+}
+
+.stageCount {
+  font: 600 12px var(--font-mono);
+  color: var(--ink);
+  font-feature-settings: 'tnum';
+}
+
+.stageEmpty {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.stageBar {
+  width: 100%;
+  border-radius: 6px;
+}
+
+.stageLabel {
+  font: 700 8.5px var(--font-sans);
+  letter-spacing: 0.05em;
+  color: var(--ink);
+  text-align: center;
+}
+
+.filterRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  flex: none;
+}
+
+.filters {
+  display: flex;
+  gap: 7px;
+}
+
+.filter {
+  font: 700 11px var(--font-sans);
+  color: var(--ink);
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-chip);
+  padding: 6px 13px;
+  cursor: pointer;
+}
+
+.filterMuted {
+  color: var(--muted);
+}
+
+.filterActive {
+  background: var(--sea);
+  color: #fff;
+}
+
+.selectionBar {
+  background: var(--sea-tint);
+  border-radius: var(--radius-card);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: none;
+}
+
+.selectionText {
+  font: 700 12.5px var(--font-sans);
+  color: var(--sea-dark);
+}
+
+.selectionBtn {
+  font: 700 12px var(--font-sans);
+  color: #fff;
+  background: var(--sea);
+  border: none;
+  border-radius: var(--radius-chip);
+  padding: 9px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  flex: none;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-row);
+}
+
+.rowSelected {
+  background: var(--sea-tint);
+}
+
+.rowDone {
+  border-left: 4px solid var(--basil);
+}
+
+.check {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  flex: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkOn {
+  background: var(--sea);
+  border-color: var(--sea);
+}
+
+.checkDone {
+  background: var(--basil-tint);
+  border-color: var(--basil);
+}
+
+.checkDone span {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--basil);
+}
+
+.partName {
+  flex: 1;
+  min-width: 0;
+  font: 600 13.5px var(--font-sans);
+  color: var(--ink);
+}
+
+.stamp {
+  width: 96px;
+  text-align: right;
+  font: 400 10.5px var(--font-mono);
+  color: var(--muted);
+}
+
+.advance {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: 700 11px var(--font-sans);
+  color: var(--sea-dark);
+  white-space: nowrap;
+  background: transparent;
+  border: 1px solid var(--outline-soft);
+  border-radius: var(--radius-chip);
+  padding: 5px 11px;
+  cursor: pointer;
+}
+
+.advance span {
+  font-size: 8px;
+  color: var(--muted);
+}
+
+.advanceOpen {
+  background: var(--sea-dark);
+  border-color: var(--sea-dark);
+  color: #fff;
+}
+
+.advanceOpen span {
+  color: #fff;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  width: 268px;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-menu);
+  padding: 8px;
+}
+
+.menuKicker {
+  font: 700 9px var(--font-mono);
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  padding: 6px 10px 4px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  font: 600 12.5px var(--font-sans);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background: var(--ground);
+}
+
+.menuNext {
+  background: var(--lemon-tint);
+  font-weight: 700;
+}
+
+.menuNext:hover {
+  background: var(--lemon-tint);
+}
+
+.menuDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.menuTag {
+  margin-left: auto;
+  font: 600 10px var(--font-mono);
+  color: var(--muted);
+}
+
+.menuRule {
+  height: 1px;
+  background: var(--hairline);
+  margin: 6px 10px;
+}
+
+.menuDanger {
+  color: var(--terra);
+}
+
+.showMore {
+  align-self: center;
+  margin-top: 2px;
+  font: 700 11.5px var(--font-sans);
+  color: var(--sea-dark);
+  background: var(--surface);
+  border: 1px solid var(--sea-dark);
+  border-radius: var(--radius-chip);
+  padding: 8px 18px;
+  cursor: pointer;
+}
+
+/* right rail */
+
+.nextCard {
+  border-radius: var(--radius-card);
+  padding: 18px;
+  flex: none;
+}
+
+.nextKicker {
+  font: 700 9px var(--font-mono);
+  letter-spacing: 0.16em;
+  color: var(--sea-dark);
+}
+
+.nextTitle {
+  font: 700 15px var(--font-sans);
+  color: var(--ink);
+  margin-top: 6px;
+}
+
+.nextSub {
+  font: 400 11px/1.5 var(--font-mono);
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.waitRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  background: var(--basil-tint);
+  border-radius: var(--radius-card);
+  padding: 11px 13px;
+}
+
+.waitDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--basil);
+  flex: none;
+}
+
+.waitName {
+  font: 700 12px var(--font-sans);
+  color: var(--ink);
+}
+
+.waitNote {
+  font: 400 10.5px var(--font-mono);
+  color: var(--muted);
+  margin-top: 2px;
+}

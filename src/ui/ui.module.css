@@ -1,0 +1,243 @@
+.page {
+  height: 100vh;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 212px 1fr 292px;
+  gap: 18px;
+  background: var(--ground);
+}
+
+.pageWide {
+  grid-template-columns: 212px 1fr;
+}
+
+/* the three columns scroll on their own */
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.colWide {
+  gap: 18px;
+}
+
+.rail {
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--shadow-card);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px 16px;
+}
+
+.brandMark {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--sea-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.brandMark span {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--sea);
+}
+
+.brandName {
+  font: 700 15px var(--font-sans);
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+.brandSub {
+  display: block;
+  font: 600 11px var(--font-sans);
+  color: var(--muted);
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+  border-radius: var(--radius-card);
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  color: var(--ink);
+  font: 600 13.5px var(--font-sans);
+  cursor: pointer;
+}
+
+.navItem span {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: var(--sea-tint);
+  flex: none;
+}
+
+.navActive {
+  background: var(--sea);
+  color: #fff;
+  font-weight: 700;
+}
+
+.navActive span {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.railBlock {
+  margin-top: 22px;
+  padding: 0 4px;
+}
+
+.railBottom {
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.kicker {
+  font: 700 9.5px var(--font-mono);
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.statRows {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font: 600 12px var(--font-sans);
+  color: var(--ink);
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+}
+
+.statValue {
+  font-family: var(--font-mono);
+  color: var(--muted);
+  font-feature-settings: 'tnum';
+}
+
+.illustration {
+  background: var(--basil-tint);
+  border-radius: var(--radius-card);
+  height: 104px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.railCopy {
+  font: 400 11.5px/1.5 var(--font-sans);
+  color: var(--muted);
+  text-align: center;
+  margin-top: 12px;
+}
+
+.btnFill {
+  width: 100%;
+  margin-top: 12px;
+  font: 700 12.5px var(--font-sans);
+  color: #fff;
+  background: var(--sea);
+  border: none;
+  border-radius: var(--radius-chip);
+  padding: 11px;
+  cursor: pointer;
+}
+
+.btnOutline {
+  width: 100%;
+  font: 700 12.5px var(--font-sans);
+  color: var(--sea-dark);
+  background: transparent;
+  border: 1px solid var(--sea-dark);
+  border-radius: var(--radius-chip);
+  padding: 10px;
+  cursor: pointer;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: 18px;
+  box-shadow: var(--shadow-card);
+}
+
+.cardTitle {
+  font: 700 13.5px var(--font-sans);
+  color: var(--ink);
+}
+
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.link {
+  font: 600 11px var(--font-sans);
+  color: var(--sea);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.shelf {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.shelfRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.shelfName {
+  font: 600 12px var(--font-sans);
+  color: var(--ink);
+}
+
+.shelfStock {
+  font: 600 10.5px var(--font-mono);
+  color: var(--basil);
+}
+
+.shelfLow {
+  color: var(--terra);
+}
+
+.shelfNone {
+  color: var(--muted);
+}
