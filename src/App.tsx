@@ -5,7 +5,8 @@ import { Dashboard } from './screens/Dashboard.tsx';
 import { BuildDetail } from './screens/BuildDetail.tsx';
 import { Toolbox } from './screens/Toolbox.tsx';
 import { ToolboxModal } from './screens/ToolboxModal.tsx';
-import { Illustration, LeftRail, ui, type Screen } from './ui/Shell.tsx';
+import { AddPartModal } from './screens/AddPartModal.tsx';
+import { type Screen } from './ui/Shell.tsx';
 
 const blankEntry = (): ToolboxEntry => ({
   id: crypto.randomUUID(),
@@ -21,6 +22,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('dashboard');
   const [openBuildId, setOpenBuildId] = useState<string | null>(null);
   const [modal, setModal] = useState<{ entry: ToolboxEntry; isNew: boolean } | null>(null);
+  const [addingPart, setAddingPart] = useState(false);
 
   const navigate = (next: Screen) => {
     setOpenBuildId(null);
@@ -42,7 +44,8 @@ export default function App() {
           builds={builds}
           onNavigate={navigate}
           onBack={() => setOpenBuildId(null)}
-          onAddPart={() => ask('Name the new part', '', (name) => store.addPart(openBuild.id, name))}
+          onAddPart={() => setAddingPart(true)}
+          onRenameBuild={(name) => store.renameBuild(openBuild.id, name)}
           onMove={store.moveTo}
           onAdvance={store.advance}
           onRename={(id) => {
@@ -81,32 +84,14 @@ export default function App() {
         />
       )}
 
-      {screen === 'materials' && (
-        <div className={`${ui.page} ${ui.pageWide}`}>
-          <LeftRail
-            active="materials"
-            onNavigate={navigate}
-            bottom={
-              <>
-                <Illustration />
-                <div className={ui.railCopy}>
-                  Materials lives in the nav,
-                  <br />
-                  but it has not been designed yet.
-                </div>
-              </>
-            }
-          />
-          <div className={ui.col}>
-            <div className={ui.card}>
-              <div className={ui.cardTitle}>Materials</div>
-              <div className={ui.railCopy} style={{ textAlign: 'left' }}>
-                Not designed yet — stock states show on the dashboard and on a build&apos;s next
-                step for now.
-              </div>
-            </div>
-          </div>
-        </div>
+      {addingPart && openBuild && (
+        <AddPartModal
+          onAdd={(name, note) => {
+            store.addPart(openBuild.id, name, note);
+            setAddingPart(false);
+          }}
+          onClose={() => setAddingPart(false)}
+        />
       )}
 
       {modal && (

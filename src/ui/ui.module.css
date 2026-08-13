@@ -89,11 +89,19 @@
 }
 
 .navItem span {
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
   background: var(--sea-tint);
   flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navIcon svg {
+  width: 24px;
+  height: 24px;
 }
 
 .navActive {

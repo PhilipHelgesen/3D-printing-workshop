@@ -24,10 +24,55 @@
   margin-top: 8px;
 }
 
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .name {
   font: 700 24px var(--font-sans);
   color: var(--ink);
   letter-spacing: -0.015em;
+}
+
+.nameField {
+  font: 700 24px var(--font-sans);
+  color: var(--ink);
+  letter-spacing: -0.015em;
+  background: var(--field);
+  border: none;
+  border-radius: 10px;
+  padding: 2px 8px;
+  margin: -2px -8px;
+  width: 320px;
+  max-width: 60vw;
+}
+
+.nameField:focus-visible {
+  outline: 2px solid var(--sea);
+  outline-offset: 1px;
+}
+
+.namePen {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: var(--sea-tint);
+  color: var(--sea-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.namePen:hover {
+  background: var(--sea);
+  color: #fff;
 }
 
 .meta {
@@ -214,11 +259,28 @@
   background: var(--basil);
 }
 
-.partName {
+.partInfo {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.partName {
   font: 600 13.5px var(--font-sans);
   color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.partNote {
+  font: 400 10.5px var(--font-mono);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stamp {

@@ -44,6 +44,7 @@ export function BuildDetail({
   onNavigate,
   onBack,
   onAddPart,
+  onRenameBuild,
   onMove,
   onAdvance,
   onRename,
@@ -55,6 +56,7 @@ export function BuildDetail({
   onNavigate: (screen: Screen) => void;
   onBack: () => void;
   onAddPart: () => void;
+  onRenameBuild: (name: string) => void;
   onMove: (ids: string[], status: PartStatus) => void;
   onAdvance: (ids: string[]) => void;
   onRename: (id: string) => void;
@@ -65,6 +67,19 @@ export function BuildDetail({
   const [filter, setFilter] = useState<'all' | 'needs' | 'done'>('all');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(build.name);
+
+  useEffect(() => {
+    setEditingName(false);
+  }, [build.id]);
+
+  const saveName = () => {
+    setEditingName(false);
+    const trimmed = nameDraft.trim();
+    if (trimmed && trimmed !== build.name) onRenameBuild(trimmed);
+    else setNameDraft(build.name);
+  };
 
   useEffect(() => {
     if (!openMenu) return;
@@ -145,7 +160,38 @@ export function BuildDetail({
           </button>
           <div className={s.headRow}>
             <div>
-              <div className={s.name}>{build.name}</div>
+              <div className={s.nameRow}>
+                {editingName ? (
+                  <input
+                    className={s.nameField}
+                    autoFocus
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onBlur={saveName}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveName();
+                      if (e.key === 'Escape') {
+                        setNameDraft(build.name);
+                        setEditingName(false);
+                      }
+                    }}
+                  />
+                ) : (
+                  <>
+                    <div className={s.name}>{build.name}</div>
+                    <button
+                      className={s.namePen}
+                      onClick={() => {
+                        setNameDraft(build.name);
+                        setEditingName(true);
+                      }}
+                      aria-label="Rename build"
+                    >
+                      ✎
+                    </button>
+                  </>
+                )}
+              </div>
               <div className={s.meta}>
                 updated {timeAgo(buildUpdatedAt(build))}
                 {build.deadline && ` · con in ${daysUntil(build.deadline)} days`}
@@ -242,7 +288,10 @@ export function BuildDetail({
                 >
                   {isDone && <span />}
                 </button>
-                <span className={s.partName}>{part.name}</span>
+                <div className={s.partInfo}>
+                  <span className={s.partName}>{part.name}</span>
+                  {part.note && <span className={s.partNote}>{part.note}</span>}
+                </div>
                 <StatusPill status={part.status} />
                 <span className={s.stamp}>{partTime(part)}</span>
                 <button

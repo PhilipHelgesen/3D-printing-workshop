@@ -100,7 +100,7 @@ export function useStore() {
       [mapParts],
     ),
     addPart: useCallback(
-      (buildId: string, name: string) =>
+      (buildId: string, name: string, note?: string) =>
         setState((s) => ({
           ...s,
           builds: s.builds.map((b) =>
@@ -112,6 +112,7 @@ export function useStore() {
                       id: crypto.randomUUID(),
                       buildId,
                       name,
+                      note,
                       status: 'queued' as PartStatus,
                       updatedAt: new Date().toISOString(),
                     },
@@ -135,6 +136,11 @@ export function useStore() {
       [],
     ),
     renamePart: useCallback((id: string, name: string) => mapParts([id], (p) => ({ ...p, name })), [mapParts]),
+    renameBuild: useCallback(
+      (id: string, name: string) =>
+        setState((s) => ({ ...s, builds: s.builds.map((b) => (b.id === id ? { ...b, name } : b)) })),
+      [],
+    ),
     setNote: useCallback(
       (id: string, note: string) => mapParts([id], (p) => ({ ...p, note: note || undefined })),
       [mapParts],

@@ -76,20 +76,20 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 250px));
+  gap: 8px;
 }
 
 .card {
   position: relative;
   background: var(--surface);
   border-radius: var(--radius-card);
-  padding: 16px 14px;
+  padding: 8px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 10px;
-  text-align: center;
+  gap: 8px;
+  text-align: left;
   box-shadow: var(--shadow-tile);
   border: none;
   font: inherit;
@@ -150,9 +150,9 @@
 }
 
 .icon {
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-icon);
+  width: 96px;
+  height: 96px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -170,18 +170,28 @@
   display: block;
 }
 
+.info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .name {
   font: 700 12.5px/1.3 var(--font-sans);
   color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .note {
   font: 400 10.5px/1.4 var(--font-mono);
   color: var(--muted);
-  border-top: 1px solid var(--hairline);
-  padding-top: 7px;
-  width: 100%;
-  margin-top: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .empty {

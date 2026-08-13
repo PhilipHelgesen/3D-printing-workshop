@@ -70,7 +70,7 @@ export function Dashboard({
       <div className={ui.col}>
         <div className={s.hero}>
           <div>
-            <div className={s.greeting}>Buongiorno, Mara</div>
+            <div className={s.greeting}>Hello, Philip!</div>
             <div className={s.heroSub}>
               {recommended
                 ? `${recommended.parts.length} parts are ready for ${recommended.noun} — one setup clears ${word(recommended.buildCount)} ${recommended.buildCount === 1 ? 'build' : 'builds'}.`

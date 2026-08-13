@@ -182,8 +182,10 @@ export function Toolbox({
                         'ICON'
                       )}
                     </span>
-                    <span className={s.name}>{entry.name}</span>
-                    {entry.note && <span className={s.note}>{entry.note}</span>}
+                    <span className={s.info}>
+                      <span className={s.name}>{entry.name}</span>
+                      {entry.note && <span className={s.note}>{entry.note}</span>}
+                    </span>
                   </div>
                 ))}
               </div>
