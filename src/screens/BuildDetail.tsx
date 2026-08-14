@@ -20,8 +20,7 @@ import {
   timeAgo,
   timeLeft,
 } from '../derive.ts';
-import { STEP_SHELF } from '../seed.ts';
-import { LeftRail, ShelfList } from '../ui/Shell.tsx';
+import { LeftRail } from '../ui/Shell.tsx';
 import { PartRow, type PartRowActions } from './PartRow.tsx';
 import ui from '../ui/ui.module.css';
 import s from './build.module.css';
@@ -345,11 +344,6 @@ export function BuildDetail({
             ))}
           </div>
         )}
-
-        <div className={ui.card} style={{ flex: 'none' }}>
-          <div className={ui.cardTitle}>For the next step</div>
-          <ShelfList materials={STEP_SHELF} />
-        </div>
       </div>
     </div>
   );

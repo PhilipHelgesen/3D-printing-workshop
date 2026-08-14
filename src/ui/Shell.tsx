@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { Material, Screen } from '../types.ts';
+import type { Screen } from '../types.ts';
 import s from './ui.module.css';
 
 const NAV: { id: Screen; label: string }[] = [
@@ -74,23 +74,4 @@ export function LeftRail({
 
 export function Illustration({ label = 'ILLUSTRATION' }: { label?: string }) {
   return <div className={s.illustration}>{label}</div>;
-}
-
-export function ShelfList({ materials }: { materials: Material[] }) {
-  return (
-    <div className={s.shelf}>
-      {materials.map((m) => (
-        <div key={m.name} className={s.shelfRow}>
-          <span className={s.shelfName}>{m.name}</span>
-          <span
-            className={`${s.shelfStock} ${m.stock === 'running low' ? s.shelfLow : ''} ${
-              m.stock === 'none' ? s.shelfNone : ''
-            }`}
-          >
-            {m.stock === 'none' ? '—' : m.stock}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
 }
