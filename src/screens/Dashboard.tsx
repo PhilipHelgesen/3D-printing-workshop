@@ -12,8 +12,7 @@ import {
   timeAgo,
   timeLeft,
 } from '../derive.ts';
-import { SHELF } from '../seed.ts';
-import { Illustration, LeftRail, ShelfList } from '../ui/Shell.tsx';
+import { Illustration, LeftRail } from '../ui/Shell.tsx';
 import { StatusPill } from '../ui/StatusPill.tsx';
 import ui from '../ui/ui.module.css';
 import s from './dashboard.module.css';
@@ -39,7 +38,8 @@ export function Dashboard({
   const totalDone = builds.reduce((n, b) => n + partsDone(b), 0);
 
   return (
-    <div className={ui.page}>
+    // Nothing curing means no right rail — drop the third column rather than leave a gutter.
+    <div className={`${ui.page} ${curing.length === 0 ? ui.pageWide : ''}`}>
       <LeftRail
         active="dashboard"
         onNavigate={onNavigate}
@@ -110,8 +110,8 @@ export function Dashboard({
         </div>
       </div>
 
-      <div className={ui.col}>
-        {curing.length > 0 && (
+      {curing.length > 0 && (
+        <div className={ui.col}>
           <div className={s.curing}>
             <div className={ui.cardTitle}>Curing — hands off</div>
             <div className={s.curingBody}>
@@ -123,18 +123,8 @@ export function Dashboard({
               </span>
             </div>
           </div>
-        )}
-
-        <div className={ui.card} style={{ flex: 'none' }}>
-          <div className={ui.cardHead}>
-            <span className={ui.cardTitle}>Materials &amp; tools</span>
-            <button className={ui.link} onClick={() => onNavigate('toolbox')}>
-              Open
-            </button>
-          </div>
-          <ShelfList materials={SHELF} />
         </div>
-      </div>
+      )}
     </div>
   );
 }

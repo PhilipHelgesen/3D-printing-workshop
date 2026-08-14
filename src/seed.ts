@@ -1,4 +1,4 @@
-import type { Build, Material, Part, PartStatus, State, ToolboxEntry } from './types.ts';
+import type { Build, Part, PartStatus, State, ToolboxEntry } from './types.ts';
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
@@ -148,19 +148,6 @@ const TOOLBOX: ToolboxEntry[] = [
   entry('k4', 'technique', 'Battle damage', undefined, false, 'c'),
   entry('k5', 'technique', 'Magnet mounting', undefined, false, 'b'),
   entry('k6', 'technique', 'Strapping'),
-];
-
-/** Not modelled yet — the Materials screen is a nav placeholder. */
-export const SHELF: Material[] = [
-  { name: 'Filler primer', stock: 'in stock' },
-  { name: '400 grit paper', stock: 'running low' },
-  { name: 'Graphite powder', stock: 'in stock' },
-];
-
-export const STEP_SHELF: Material[] = [
-  { name: 'Filler primer', stock: 'in stock' },
-  { name: 'Respirator', stock: 'none' },
-  { name: '400 grit paper', stock: 'running low' },
 ];
 
 export const ICON_IDS = ['a', 'b', 'c'];

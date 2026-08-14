@@ -37,11 +37,6 @@ export interface ToolboxEntry {
   favorite: boolean;
 }
 
-export interface Material {
-  name: string;
-  stock: 'in stock' | 'running low' | 'none';
-}
-
 export interface State {
   builds: Build[];
   toolbox: ToolboxEntry[];

@@ -74,7 +74,7 @@ store's action object, one assert in `derive.check.ts`, then the UI.
 - `workshop.ts` — `moveTo`, `advance`, `addPart`, `linkParts`, `saveEntry`, …
   Pure apart from `crypto.randomUUID()` / `new Date()`.
 - `store.ts` — `useStore()`: state, persistence, and the bound action object.
-- `seed.ts` — the mock workshop used on first load, plus placeholder shelf lists.
+- `seed.ts` — the mock workshop used on first load, plus the built-in icon swatches.
 - `icons.ts` — downscales and uploads toolbox icons to Supabase Storage.
 - `derive.check.ts` — the whole test suite. Plain `node:assert`.
 
@@ -169,10 +169,12 @@ Design tokens (colors, radii, shadows, fonts) are CSS variables in `src/index.cs
 Use them; don't hardcode hex values. Each screen has its own `*.module.css`;
 shared chrome lives in `ui/ui.module.css`.
 
-The UI has since deliberately diverged from the handoff in places (the dashboard's
-batch panel and per-card next-step block were removed, toolbox cards went
-horizontal, nav lost Materials). Current code wins over the handoff where they
-disagree.
+The UI has since deliberately diverged from the handoff in places: the dashboard
+lost its batch panel, per-card next-step block and materials card; the build page
+lost its "For the next step" materials card; toolbox cards went horizontal; nav
+lost Materials. **Materials are not modelled at all** — the old cards were
+hardcoded placeholder lists and were deleted rather than left lying. Current code
+wins over the handoff where they disagree.
 
 ---
 
