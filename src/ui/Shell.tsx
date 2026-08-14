@@ -1,15 +1,13 @@
 import type { ReactNode } from 'react';
-import type { Material } from '../types.ts';
+import type { Material, Screen } from '../types.ts';
 import s from './ui.module.css';
-
-export type Screen = 'dashboard' | 'toolbox';
 
 const NAV: { id: Screen; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'toolbox', label: 'Toolbox' },
 ];
 
-/** 18×18, stroke=currentColor so it inherits the nav row's active/inactive color. */
+/** 24×24, stroke=currentColor so it inherits the nav row's active/inactive color. */
 const NAV_ICON: Record<Screen, ReactNode> = {
   dashboard: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -20,7 +18,14 @@ const NAV_ICON: Record<Screen, ReactNode> = {
     </svg>
   ),
   toolbox: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M8 9V6.5a4 4 0 0 1 8 0V9" />
       <rect x="3" y="9" width="18" height="10.5" rx="2" />
       <path d="M3 14h18" />
@@ -40,7 +45,7 @@ export function LeftRail({
   bottom?: ReactNode;
 }) {
   return (
-    <div className={s.rail}>
+    <nav className={s.rail}>
       <div className={s.brand}>
         <span className={s.brandMark}>
           <span />
@@ -54,6 +59,7 @@ export function LeftRail({
         <button
           key={item.id}
           className={`${s.navItem} ${active === item.id ? s.navActive : ''}`}
+          aria-current={active === item.id ? 'page' : undefined}
           onClick={() => onNavigate(item.id)}
         >
           <span className={s.navIcon}>{NAV_ICON[item.id]}</span>
@@ -62,7 +68,7 @@ export function LeftRail({
       ))}
       {children}
       {bottom && <div className={s.railBottom}>{bottom}</div>}
-    </div>
+    </nav>
   );
 }
 
@@ -88,5 +94,3 @@ export function ShelfList({ materials }: { materials: Material[] }) {
     </div>
   );
 }
-
-export { s as ui };

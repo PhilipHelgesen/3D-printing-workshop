@@ -179,8 +179,8 @@ export const recommendedGroup = (groups: BatchGroup[]) =>
   groups[0]?.actionable ? groups[0] : null;
 
 /** Parts the maker has to pick up and do something with, across all builds. */
-export const partsWaitingOnYou = (builds: Build[], now = Date.now()) =>
-  batchGroups(builds, now).reduce((n, g) => n + g.parts.length, 0);
+export const partsWaitingOnYou = (groups: BatchGroup[]) =>
+  groups.reduce((n, g) => n + g.parts.length, 0);
 
 // ——— formatting ———
 
@@ -221,29 +221,40 @@ export function daysUntil(iso: string, now = Date.now()): number {
 export const curingParts = (builds: Build[], now = Date.now()) =>
   builds.flatMap((b) => b.parts.filter((p) => p.status !== 'printing' && isHandsOff(p, now)));
 
-/** The rest of a part's assembly — other parts sharing its link group, that should stay on the same step. */
-export const linkGroup = (build: Build, part: Part): Part[] =>
-  part.linkGroupId ? build.parts.filter((p) => p.id !== part.id && p.linkGroupId === part.linkGroupId) : [];
+/**
+ * Assembly members by link group id — one pass, so callers can look a part's
+ * siblings up instead of rescanning the list for every row.
+ */
+export function assemblies(parts: Part[]): Map<string, Part[]> {
+  const byGroup = new Map<string, Part[]>();
+  for (const p of parts) {
+    if (!p.linkGroupId) continue;
+    const members = byGroup.get(p.linkGroupId);
+    if (members) members.push(p);
+    else byGroup.set(p.linkGroupId, [p]);
+  }
+  return byGroup;
+}
+
+/** The rest of a part's assembly — the ones that should stay on the same step as it. */
+export const siblings = (part: Part, byGroup: Map<string, Part[]>): Part[] =>
+  part.linkGroupId ? (byGroup.get(part.linkGroupId) ?? []).filter((p) => p.id !== part.id) : [];
 
 /** Queued first, done last — how far each part has come through the pipeline. */
 export const sortByProgress = (parts: Part[]): Part[] =>
   [...parts].sort((a, b) => PIPELINE.indexOf(a.status) - PIPELINE.indexOf(b.status));
 
-/** Reorders a part list so each assembly's members sit next to each other, so the UI can draw connectors between them. */
+/** Reorders a list so each assembly's members sit together, for the UI to bracket them. */
 export function groupLinked(parts: Part[]): Part[] {
+  const byGroup = assemblies(parts);
   const seen = new Set<string>();
   const out: Part[] = [];
   for (const p of parts) {
     if (seen.has(p.id)) continue;
-    out.push(p);
-    seen.add(p.id);
-    if (p.linkGroupId) {
-      for (const q of parts) {
-        if (q.id !== p.id && q.linkGroupId === p.linkGroupId && !seen.has(q.id)) {
-          out.push(q);
-          seen.add(q.id);
-        }
-      }
+    for (const member of p.linkGroupId ? byGroup.get(p.linkGroupId)! : [p]) {
+      if (seen.has(member.id)) continue;
+      out.push(member);
+      seen.add(member.id);
     }
   }
   return out;

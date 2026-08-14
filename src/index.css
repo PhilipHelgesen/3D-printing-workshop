@@ -61,8 +61,3 @@ body {
 button {
   font-family: inherit;
 }
-
-/* all numeric figures */
-.tnum {
-  font-feature-settings: 'tnum';
-}

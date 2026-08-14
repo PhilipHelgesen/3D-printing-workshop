@@ -1,10 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import type { Build, Part, PartStatus } from '../types.ts';
+import { useMemo, useState, type ReactNode } from 'react';
+import type { Build, Part, PartStatus, Screen } from '../types.ts';
 import {
   STAGES,
   STATIONS,
-  STATUS_LABEL,
   STATUS_TOKENS,
+  assemblies,
   batchGroups,
   buildUpdatedAt,
   countByStatus,
@@ -12,20 +12,18 @@ import {
   daysUntil,
   groupLinked,
   isHandsOff,
-  linkGroup,
-  nextStatus,
-  otherSteps,
-  partTime,
   partsDone,
   shortDate,
+  siblings,
   sortByProgress,
   suggestedNextStep,
   timeAgo,
   timeLeft,
 } from '../derive.ts';
 import { STEP_SHELF } from '../seed.ts';
-import { LeftRail, ShelfList, ui, type Screen } from '../ui/Shell.tsx';
-import { StatusPill } from '../ui/StatusPill.tsx';
+import { LeftRail, ShelfList } from '../ui/Shell.tsx';
+import { PartRow, type PartRowActions } from './PartRow.tsx';
+import ui from '../ui/ui.module.css';
 import s from './build.module.css';
 
 const PAGE = 9;
@@ -36,18 +34,71 @@ const TONE_BG = {
   print: 'var(--sea-tint)',
 };
 
-const label = (status: PartStatus) => status.charAt(0).toUpperCase() + status.slice(1);
-const stationOf = (status: PartStatus) => STATIONS.find((st) => st.status === status);
-
 /** Bars read against each other, not against the column: +8px a part, capped. */
 const barHeight = (count: number) => (count === 0 ? 5 : Math.min(62, 4 + 8 * count));
 
-const LinkIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-    <path d="M10 14a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1" />
-    <path d="M14 10a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1" />
-  </svg>
-);
+function StageFlow({ parts }: { parts: Part[] }) {
+  return (
+    <div className={s.flow}>
+      {STAGES.map((stage) => {
+        const count = countByStatus(parts, stage.status);
+        const empty = count === 0;
+        return (
+          <div key={stage.status} className={`${s.stage} ${stage.status === 'done' ? s.stageWide : ''}`}>
+            <span className={`${s.stageCount} ${empty ? s.stageEmpty : ''}`}>{count}</span>
+            <span
+              className={s.stageBar}
+              style={{
+                height: barHeight(count),
+                background: empty ? 'var(--track)' : STATUS_TOKENS[stage.status].solid,
+              }}
+            />
+            <span className={s.stageLabel} style={empty ? { color: 'var(--muted)' } : undefined}>
+              {stage.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function BuildName({ name, onRename }: { name: string; onRename: (name: string) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+
+  const save = () => {
+    const trimmed = (draft ?? '').trim();
+    if (trimmed && trimmed !== name) onRename(trimmed);
+    setDraft(null);
+  };
+
+  if (draft === null) {
+    return (
+      <div className={s.nameRow}>
+        <div className={s.name}>{name}</div>
+        <button className={s.namePen} onClick={() => setDraft(name)} aria-label="Rename build">
+          ✎
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={s.nameRow}>
+      <input
+        className={s.nameField}
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') save();
+          if (e.key === 'Escape') setDraft(null);
+        }}
+      />
+    </div>
+  );
+}
 
 export function BuildDetail({
   build,
@@ -56,12 +107,9 @@ export function BuildDetail({
   onBack,
   onAddPart,
   onRenameBuild,
-  onMove,
   onAdvance,
-  onRename,
-  onNote,
-  onDelete,
   onLinkPart,
+  rowActions,
 }: {
   build: Build;
   builds: Build[];
@@ -69,204 +117,75 @@ export function BuildDetail({
   onBack: () => void;
   onAddPart: () => void;
   onRenameBuild: (name: string) => void;
-  onMove: (ids: string[], status: PartStatus) => void;
   onAdvance: (ids: string[]) => void;
-  onRename: (id: string) => void;
-  onNote: (id: string) => void;
-  onDelete: (id: string) => void;
   onLinkPart: (id: string) => void;
+  rowActions: Omit<PartRowActions, 'onToggleSelect' | 'onLink'>;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [filter, setFilter] = useState<'all' | 'needs' | 'done'>('all');
   const [sortMode, setSortMode] = useState<'recent' | 'progress'>('recent');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
-  const [editingName, setEditingName] = useState(false);
-  const [nameDraft, setNameDraft] = useState(build.name);
-
-  useEffect(() => {
-    setEditingName(false);
-  }, [build.id]);
-
-  const saveName = () => {
-    setEditingName(false);
-    const trimmed = nameDraft.trim();
-    if (trimmed && trimmed !== build.name) onRenameBuild(trimmed);
-    else setNameDraft(build.name);
-  };
-
-  useEffect(() => {
-    if (!openMenu) return;
-    const close = () => setOpenMenu(null);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-    };
-    document.addEventListener('click', close);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('click', close);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [openMenu]);
 
   const done = partsDone(build);
   const next = suggestedNextStep(build);
   const group = next ? batchGroups(builds).find((g) => g.status === next.status) : undefined;
-  const elsewhere = group
-    ? group.parts.length - group.parts.filter((p) => p.buildId === build.id).length
-    : 0;
+  const elsewhere = group ? group.parts.filter((p) => p.buildId !== build.id).length : 0;
   const waiting = curingParts([build]);
 
-  const byFilter = build.parts.filter((p) =>
-    filter === 'all' ? true : filter === 'done' ? p.status === 'done' : p.status !== 'done',
-  );
-  // Linked pairs are pulled adjacent last, after ordering — pairing wins over strict progress order.
-  const filtered = groupLinked(sortMode === 'progress' ? sortByProgress(byFilter) : byFilter);
-  const visible = showAll ? filtered : filtered.slice(0, PAGE);
+  const byGroup = useMemo(() => assemblies(build.parts), [build.parts]);
+
+  const visible = useMemo(() => {
+    const kept = build.parts.filter((p) =>
+      filter === 'all' ? true : filter === 'done' ? p.status === 'done' : p.status !== 'done',
+    );
+    // Assemblies are pulled together last, so a linked pair stays adjacent whatever the sort.
+    return groupLinked(sortMode === 'progress' ? sortByProgress(kept) : kept);
+  }, [build.parts, filter, sortMode]);
+
+  const shown = showAll ? visible : visible.slice(0, PAGE);
 
   const picked = build.parts.filter((p) => selected.includes(p.id));
   const sharedStatus =
     picked.length > 0 && picked.every((p) => p.status === picked[0].status) ? picked[0].status : null;
-  const sharedStation = sharedStatus ? stationOf(sharedStatus) : undefined;
+  const sharedStation = sharedStatus ? STATIONS.find((st) => st.status === sharedStatus) : undefined;
 
-  const toggle = (part: Part) =>
-    setSelected((ids) =>
-      ids.includes(part.id) ? ids.filter((id) => id !== part.id) : [...ids, part.id],
-    );
-
-  const runSelection = () => {
-    onAdvance(selected);
-    setSelected([]);
+  const actions: PartRowActions = {
+    ...rowActions,
+    onLink: onLinkPart,
+    onToggleSelect: (id) =>
+      setSelected((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id])),
   };
 
-  const renderRow = (part: Part, links: Part[]): ReactNode => {
-    const isDone = part.status === 'done';
-    const isSelected = selected.includes(part.id);
-    const outOfStep = links.filter((l) => l.status !== part.status);
-    return (
-      <div
-        key={part.id}
-        className={`${s.row} ${isSelected ? s.rowSelected : ''} ${isDone ? s.rowDone : ''}`}
-      >
-        <button
-          className={`${s.check} ${isSelected ? s.checkOn : ''} ${isDone ? s.checkDone : ''}`}
-          disabled={isDone}
-          aria-label={`Select ${part.name}`}
-          onClick={() => toggle(part)}
-        >
-          {isDone && <span />}
-        </button>
-        <div className={s.partInfo}>
-          <span className={s.nameLine}>
-            <span className={s.partName}>{part.name}</span>
-            {links.length > 0 && (
-              <span
-                className={`${s.linkBadge} ${outOfStep.length ? s.linkBadgeOff : ''}`}
-                title={
-                  outOfStep.length === 0
-                    ? `Linked to ${links.map((l) => l.name).join(', ')} — same step`
-                    : `Linked to ${links.map((l) => l.name).join(', ')} — catch up: ${outOfStep
-                        .map((l) => `${l.name} (${STATUS_LABEL[l.status]})`)
-                        .join(', ')}`
-                }
-              >
-                <LinkIcon />
-              </span>
-            )}
-          </span>
-          {part.note && <span className={s.partNote}>{part.note}</span>}
-        </div>
-        <StatusPill status={part.status} />
-        <span className={s.stamp}>{partTime(part)}</span>
-        <button
-          className={`${s.advance} ${openMenu === part.id ? s.advanceOpen : ''}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            setOpenMenu(openMenu === part.id ? null : part.id);
-          }}
-        >
-          Advance <span>▾</span>
-        </button>
-        {openMenu === part.id && (
-          <div className={s.menu} onClick={(e) => e.stopPropagation()}>
-            <div className={s.menuKicker}>MOVE TO STEP</div>
-            {otherSteps(part.status).map((status) => (
-              <button
-                key={status}
-                className={`${s.menuItem} ${status === nextStatus(part.status) ? s.menuNext : ''}`}
-                onClick={() => {
-                  onMove([part.id], status);
-                  setOpenMenu(null);
-                }}
-              >
-                <span className={s.menuDot} style={{ background: STATUS_TOKENS[status].solid }} />
-                {status === 'queued' ? 'Back to queue' : label(status)}
-                {status === nextStatus(part.status) && <span className={s.menuTag}>next</span>}
-              </button>
-            ))}
-            <div className={s.menuRule} />
-            <button
-              className={s.menuItem}
-              onClick={() => {
-                onRename(part.id);
-                setOpenMenu(null);
-              }}
-            >
-              Rename part
-            </button>
-            <button
-              className={s.menuItem}
-              onClick={() => {
-                onNote(part.id);
-                setOpenMenu(null);
-              }}
-            >
-              Notes &amp; details
-            </button>
-            <button
-              className={s.menuItem}
-              onClick={() => {
-                onLinkPart(part.id);
-                setOpenMenu(null);
-              }}
-            >
-              {links.length ? `Edit link (${links.length + 1})` : 'Link part'}
-            </button>
-            <button
-              className={`${s.menuItem} ${s.menuDanger}`}
-              onClick={() => {
-                onDelete(part.id);
-                setOpenMenu(null);
-              }}
-            >
-              Delete part
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  };
+  const renderRow = (part: Part) => (
+    <PartRow
+      key={part.id}
+      part={part}
+      links={siblings(part, byGroup)}
+      isSelected={selected.includes(part.id)}
+      menuOpen={openMenu === part.id}
+      onOpenMenu={setOpenMenu}
+      actions={actions}
+    />
+  );
 
+  // Consecutive members of one assembly get wrapped so a single bracket spans them.
   const rows: ReactNode[] = [];
-  for (let i = 0; i < visible.length; i++) {
-    const part = visible[i];
-    if (part.linkGroupId && visible[i + 1]?.linkGroupId === part.linkGroupId) {
-      const run = [part];
-      let j = i + 1;
-      while (j < visible.length && visible[j].linkGroupId === part.linkGroupId) {
-        run.push(visible[j]);
-        j++;
-      }
-      rows.push(
-        <div key={`group-${part.id}`} className={s.linkGroup}>
-          <div className={s.linkBracket} />
-          {run.map((rp) => renderRow(rp, linkGroup(build, rp)))}
-        </div>,
-      );
-      i = j - 1;
-    } else {
-      rows.push(renderRow(part, linkGroup(build, part)));
+  for (let i = 0; i < shown.length; i++) {
+    const groupId = shown[i].linkGroupId;
+    if (!groupId || shown[i + 1]?.linkGroupId !== groupId) {
+      rows.push(renderRow(shown[i]));
+      continue;
     }
+    const run: Part[] = [];
+    while (i < shown.length && shown[i].linkGroupId === groupId) run.push(shown[i++]);
+    i--;
+    rows.push(
+      <div key={`group-${run[0].id}`} className={s.linkGroup}>
+        <div className={s.linkBracket} />
+        {run.map(renderRow)}
+      </div>,
+    );
   }
 
   return (
@@ -306,38 +225,7 @@ export function BuildDetail({
           </button>
           <div className={s.headRow}>
             <div>
-              <div className={s.nameRow}>
-                {editingName ? (
-                  <input
-                    className={s.nameField}
-                    autoFocus
-                    value={nameDraft}
-                    onChange={(e) => setNameDraft(e.target.value)}
-                    onBlur={saveName}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') saveName();
-                      if (e.key === 'Escape') {
-                        setNameDraft(build.name);
-                        setEditingName(false);
-                      }
-                    }}
-                  />
-                ) : (
-                  <>
-                    <div className={s.name}>{build.name}</div>
-                    <button
-                      className={s.namePen}
-                      onClick={() => {
-                        setNameDraft(build.name);
-                        setEditingName(true);
-                      }}
-                      aria-label="Rename build"
-                    >
-                      ✎
-                    </button>
-                  </>
-                )}
-              </div>
+              <BuildName name={build.name} onRename={onRenameBuild} />
               <div className={s.meta}>
                 updated {timeAgo(buildUpdatedAt(build))}
                 {build.deadline && ` · con in ${daysUntil(build.deadline)} days`}
@@ -351,32 +239,7 @@ export function BuildDetail({
               <div className={s.figureKicker}>PARTS DONE</div>
             </div>
           </div>
-          <div className={s.flow}>
-            {STAGES.map((stage) => {
-              const count = countByStatus(build.parts, stage.status);
-              return (
-                <div
-                  key={stage.status}
-                  className={`${s.stage} ${stage.status === 'done' ? s.stageWide : ''}`}
-                >
-                  <span className={`${s.stageCount} ${count === 0 ? s.stageEmpty : ''}`}>{count}</span>
-                  <span
-                    className={s.stageBar}
-                    style={{
-                      height: barHeight(count),
-                      background: count === 0 ? 'var(--track)' : STATUS_TOKENS[stage.status].solid,
-                    }}
-                  />
-                  <span
-                    className={s.stageLabel}
-                    style={count === 0 ? { color: 'var(--muted)' } : undefined}
-                  >
-                    {stage.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          <StageFlow parts={build.parts} />
         </div>
 
         <div className={s.filterRow}>
@@ -418,7 +281,13 @@ export function BuildDetail({
                 ? `${selected.length === 1 ? '' : selected.length === 2 ? 'both ' : 'all '}waiting on ${sharedStation.noun}`
                 : 'mixed steps'}
             </span>
-            <button className={s.selectionBtn} onClick={runSelection}>
+            <button
+              className={s.selectionBtn}
+              onClick={() => {
+                onAdvance(selected);
+                setSelected([]);
+              }}
+            >
               {sharedStation ? `${sharedStation.verb} them together ▸` : 'Advance them ▸'}
             </button>
           </div>
@@ -426,9 +295,9 @@ export function BuildDetail({
 
         <div className={s.rows}>
           {rows}
-          {!showAll && filtered.length > PAGE && (
+          {!showAll && visible.length > PAGE && (
             <button className={s.showMore} onClick={() => setShowAll(true)}>
-              Show {filtered.length - PAGE} more parts
+              Show {visible.length - PAGE} more parts
             </button>
           )}
         </div>
@@ -439,7 +308,9 @@ export function BuildDetail({
           <div className={s.nextCard} style={{ background: TONE_BG[next.tone] }}>
             <div className={s.nextKicker}>NEXT STEP</div>
             <div className={s.nextTitle}>
-              {group ? `${group.verb} ${next.parts.length} ${next.parts.length === 1 ? 'part' : 'parts'}` : next.text}
+              {group
+                ? `${group.verb} ${next.parts.length} ${next.parts.length === 1 ? 'part' : 'parts'}`
+                : next.text}
             </div>
             {elsewhere > 0 && group && (
               <div className={s.nextSub}>

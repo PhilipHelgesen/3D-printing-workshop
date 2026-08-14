@@ -2,19 +2,24 @@
 import assert from 'node:assert/strict';
 import {
   BATCH_THRESHOLD,
+  assemblies,
   batchGroups,
+  groupLinked,
   nextStatus,
   otherSteps,
   partsDone,
   partsWaitingOnYou,
   progressPct,
   recommendedGroup,
+  siblings,
+  sortByProgress,
   statusPills,
   suggestedNextStep,
   timeAgo,
   timeLeft,
 } from './derive.ts';
 import { seedState } from './seed.ts';
+import * as workshop from './workshop.ts';
 
 const now = Date.UTC(2026, 7, 13, 9, 0, 0);
 const { builds } = seedState(now);
@@ -59,7 +64,7 @@ assert.equal(
 // Recommended = the setup that clears the most builds, not the biggest pile.
 assert.equal(recommendedGroup(groups)?.label, 'SPRAY PRIMER');
 assert.equal(recommendedGroup(groups)?.buildCount, 3);
-assert.equal(partsWaitingOnYou(builds, now), 18);
+assert.equal(partsWaitingOnYou(groups), 18);
 
 // —— suggested next step: prime → glue → sand, then print ——
 assert.equal(suggestedNextStep(beskar)?.text, 'Prime 2 parts — pauldron L, pauldron R');
@@ -92,6 +97,41 @@ assert.equal(nextStatus('smoothing'), 'priming');
 assert.equal(nextStatus('done'), 'done');
 assert.deepEqual(otherSteps('smoothing'), ['queued', 'printing', 'priming', 'painting', 'assembling', 'done']);
 assert.deepEqual(otherSteps('done'), ['queued', 'printing', 'smoothing', 'priming', 'painting', 'assembling']);
+
+// —— assemblies: linking merges groups, unlinking never strands a lone member ——
+const state = seedState(now);
+const [pauldronL, pauldronR, vambraceL, vambraceR] = state.builds[0].parts;
+const partsOf = (s: typeof state) => s.builds[0].parts;
+const groupOf = (s: typeof state, id: string) => partsOf(s).find((p) => p.id === id)?.linkGroupId;
+
+const pair = workshop.linkParts(state, [pauldronL.id, pauldronR.id]);
+assert.equal(groupOf(pair, pauldronL.id), groupOf(pair, pauldronR.id));
+assert.ok(groupOf(pair, pauldronL.id));
+assert.equal(groupOf(pair, vambraceL.id), undefined);
+
+// Linking a third part into an existing pair keeps that pair's group id.
+const trio = workshop.linkParts(pair, [pauldronL.id, vambraceL.id]);
+assert.equal(groupOf(trio, vambraceL.id), groupOf(pair, pauldronL.id));
+assert.equal(siblings(partsOf(trio)[0], assemblies(partsOf(trio))).length, 2);
+
+// Touching two separate assemblies merges everyone into one.
+const otherPair = workshop.linkParts(trio, [vambraceR.id, partsOf(trio)[4].id]);
+const merged = workshop.linkParts(otherPair, [pauldronL.id, vambraceR.id]);
+assert.equal(new Set(partsOf(merged).filter((p) => p.linkGroupId).map((p) => p.linkGroupId)).size, 1);
+assert.equal(partsOf(merged).filter((p) => p.linkGroupId).length, 5);
+
+// Dropping to one member clears the leftover badge rather than leaving a group of one.
+const broken = workshop.removeFromGroup(pair, pauldronR.id);
+assert.equal(groupOf(broken, pauldronL.id), undefined);
+assert.equal(groupOf(broken, pauldronR.id), undefined);
+// Same when the other half is deleted outright.
+assert.equal(groupOf(workshop.deletePart(pair, pauldronR.id), pauldronL.id), undefined);
+
+// —— list ordering: assembly members stay adjacent whatever the sort ——
+const ordered = groupLinked(sortByProgress(partsOf(trio)));
+const linkedAt = ordered.map((p, i) => (p.linkGroupId ? i : -1)).filter((i) => i >= 0);
+assert.deepEqual(linkedAt, [linkedAt[0], linkedAt[0] + 1, linkedAt[0] + 2]);
+assert.equal(ordered.length, partsOf(trio).length);
 
 // —— stamps ——
 const ago = (ms: number) => new Date(now - ms).toISOString();

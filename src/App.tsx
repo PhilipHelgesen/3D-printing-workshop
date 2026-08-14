@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ToolboxEntry } from './types.ts';
+import type { Part, Screen, ToolboxEntry } from './types.ts';
 import { useStore } from './store.ts';
 import { Dashboard } from './screens/Dashboard.tsx';
 import { BuildDetail } from './screens/BuildDetail.tsx';
@@ -7,7 +7,6 @@ import { Toolbox } from './screens/Toolbox.tsx';
 import { ToolboxModal } from './screens/ToolboxModal.tsx';
 import { AddPartModal } from './screens/AddPartModal.tsx';
 import { LinkPartModal } from './screens/LinkPartModal.tsx';
-import { type Screen } from './ui/Shell.tsx';
 
 const blankEntry = (): ToolboxEntry => ({
   id: crypto.randomUUID(),
@@ -22,7 +21,7 @@ export default function App() {
   const { builds, toolbox } = store.state;
   const [screen, setScreen] = useState<Screen>('dashboard');
   const [openBuildId, setOpenBuildId] = useState<string | null>(null);
-  const [modal, setModal] = useState<{ entry: ToolboxEntry; isNew: boolean } | null>(null);
+  const [entryModal, setEntryModal] = useState<{ entry: ToolboxEntry; isNew: boolean } | null>(null);
   const [addingPart, setAddingPart] = useState(false);
   const [linkingPartId, setLinkingPartId] = useState<string | null>(null);
 
@@ -32,57 +31,63 @@ export default function App() {
   };
 
   const openBuild = builds.find((b) => b.id === openBuildId);
+  const linkingPart = openBuild?.parts.find((p) => p.id === linkingPartId);
+  const assemblyMembers = linkingPart?.linkGroupId
+    ? openBuild!.parts.filter((p) => p.id !== linkingPart.id && p.linkGroupId === linkingPart.linkGroupId)
+    : [];
 
-  const ask = (question: string, current = '', run: (value: string) => void) => {
+  const ask = (question: string, current: string, run: (value: string) => void) => {
     const value = window.prompt(question, current);
     if (value !== null && value.trim()) run(value.trim());
   };
 
+  // ponytail: rename/note/delete still use native prompts — a modal each is only
+  // worth building when one of them needs more than a single field.
+  const rowActions = {
+    onMove: store.moveTo,
+    onRename: (part: Part) => ask('Rename part', part.name, (name) => store.renamePart(part.id, name)),
+    onNote: (part: Part) => {
+      const note = window.prompt('Notes & details', part.note ?? '');
+      if (note !== null) store.setNote(part.id, note.trim());
+    },
+    onDelete: (part: Part) => {
+      if (window.confirm(`Delete ${part.name}?`)) store.deletePart(part.id);
+    },
+  };
+
   return (
     <>
-      {screen === 'dashboard' && openBuild && (
-        <BuildDetail
-          build={openBuild}
-          builds={builds}
-          onNavigate={navigate}
-          onBack={() => setOpenBuildId(null)}
-          onAddPart={() => setAddingPart(true)}
-          onRenameBuild={(name) => store.renameBuild(openBuild.id, name)}
-          onMove={store.moveTo}
-          onAdvance={store.advance}
-          onRename={(id) => {
-            const part = openBuild.parts.find((p) => p.id === id)!;
-            ask('Rename part', part.name, (name) => store.renamePart(id, name));
-          }}
-          onNote={(id) => {
-            const part = openBuild.parts.find((p) => p.id === id)!;
-            const note = window.prompt('Notes & details', part.note ?? '');
-            if (note !== null) store.setNote(id, note.trim());
-          }}
-          onDelete={(id) => {
-            const part = openBuild.parts.find((p) => p.id === id)!;
-            if (window.confirm(`Delete ${part.name}?`)) store.deletePart(id);
-          }}
-          onLinkPart={setLinkingPartId}
-        />
-      )}
-
-      {screen === 'dashboard' && !openBuild && (
-        <Dashboard
-          builds={builds}
-          onNavigate={navigate}
-          onOpenBuild={setOpenBuildId}
-          onNewBuild={() => ask('Name the new build', '', store.addBuild)}
-        />
-      )}
+      {screen === 'dashboard' &&
+        (openBuild ? (
+          <BuildDetail
+            // Remount on a different build so per-build view state can't leak across.
+            key={openBuild.id}
+            build={openBuild}
+            builds={builds}
+            onNavigate={navigate}
+            onBack={() => setOpenBuildId(null)}
+            onAddPart={() => setAddingPart(true)}
+            onRenameBuild={(name) => store.renameBuild(openBuild.id, name)}
+            onAdvance={store.advance}
+            onLinkPart={setLinkingPartId}
+            rowActions={rowActions}
+          />
+        ) : (
+          <Dashboard
+            builds={builds}
+            onNavigate={navigate}
+            onOpenBuild={setOpenBuildId}
+            onNewBuild={() => ask('Name the new build', '', store.addBuild)}
+          />
+        ))}
 
       {screen === 'toolbox' && (
         <Toolbox
           entries={toolbox}
           onNavigate={navigate}
           onToggleFavorite={store.toggleFavorite}
-          onEdit={(entry) => setModal({ entry, isNew: false })}
-          onCreate={() => setModal({ entry: blankEntry(), isNew: true })}
+          onEdit={(entry) => setEntryModal({ entry, isNew: false })}
+          onCreate={() => setEntryModal({ entry: blankEntry(), isNew: true })}
         />
       )}
 
@@ -96,41 +101,34 @@ export default function App() {
         />
       )}
 
-      {linkingPartId &&
-        openBuild &&
-        (() => {
-          const linkingPart = openBuild.parts.find((p) => p.id === linkingPartId)!;
-          const members = openBuild.parts.filter(
-            (p) => p.id !== linkingPartId && p.linkGroupId && p.linkGroupId === linkingPart.linkGroupId,
-          );
-          const memberIds = new Set(members.map((m) => m.id));
-          return (
-            <LinkPartModal
-              part={linkingPart}
-              members={members}
-              candidates={openBuild.parts.filter((p) => p.id !== linkingPartId && !memberIds.has(p.id))}
-              onAdd={(newIds) => {
-                store.linkParts([linkingPartId, ...members.map((m) => m.id), ...newIds]);
-              }}
-              onRemoveMember={(id) => store.removeFromGroup(id)}
-              onClose={() => setLinkingPartId(null)}
-            />
-          );
-        })()}
+      {linkingPart && openBuild && (
+        <LinkPartModal
+          part={linkingPart}
+          members={assemblyMembers}
+          candidates={openBuild.parts.filter(
+            (p) => p.id !== linkingPart.id && !assemblyMembers.some((m) => m.id === p.id),
+          )}
+          onAdd={(newIds) =>
+            store.linkParts([linkingPart.id, ...assemblyMembers.map((m) => m.id), ...newIds])
+          }
+          onRemoveMember={store.removeFromGroup}
+          onClose={() => setLinkingPartId(null)}
+        />
+      )}
 
-      {modal && (
+      {entryModal && (
         <ToolboxModal
-          entry={modal.entry}
-          isNew={modal.isNew}
+          entry={entryModal.entry}
+          isNew={entryModal.isNew}
           onSave={(entry) => {
             store.saveEntry(entry);
-            setModal(null);
+            setEntryModal(null);
           }}
           onDelete={(id) => {
             store.deleteEntry(id);
-            setModal(null);
+            setEntryModal(null);
           }}
-          onClose={() => setModal(null)}
+          onClose={() => setEntryModal(null)}
         />
       )}
     </>

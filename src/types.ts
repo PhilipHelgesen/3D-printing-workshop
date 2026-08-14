@@ -46,3 +46,5 @@ export interface State {
   builds: Build[];
   toolbox: ToolboxEntry[];
 }
+
+export type Screen = 'dashboard' | 'toolbox';

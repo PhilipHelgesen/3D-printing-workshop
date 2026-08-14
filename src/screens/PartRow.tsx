@@ -1,0 +1,152 @@
+import { useEffect } from 'react';
+import type { Part, PartStatus } from '../types.ts';
+import { STATUS_LABEL, STATUS_TOKENS, nextStatus, otherSteps, partTime } from '../derive.ts';
+import { StatusPill } from '../ui/StatusPill.tsx';
+import s from './build.module.css';
+
+const stepLabel = (status: PartStatus) =>
+  status === 'queued' ? 'Back to queue' : status.charAt(0).toUpperCase() + status.slice(1);
+
+const LinkIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+    <path d="M10 14a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1" />
+    <path d="M14 10a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1" />
+  </svg>
+);
+
+function linkTitle(part: Part, links: Part[]) {
+  const names = links.map((l) => l.name).join(', ');
+  const behind = links.filter((l) => l.status !== part.status);
+  if (!behind.length) return `Linked to ${names} — same step`;
+  const detail = behind.map((l) => `${l.name} (${STATUS_LABEL[l.status]})`).join(', ');
+  return `Linked to ${names} — catch up: ${detail}`;
+}
+
+export interface PartRowActions {
+  onToggleSelect: (id: string) => void;
+  onMove: (ids: string[], status: PartStatus) => void;
+  onRename: (part: Part) => void;
+  onNote: (part: Part) => void;
+  onDelete: (part: Part) => void;
+  onLink: (id: string) => void;
+}
+
+export function PartRow({
+  part,
+  links,
+  isSelected,
+  menuOpen,
+  onOpenMenu,
+  actions,
+}: {
+  part: Part;
+  /** The rest of this part's assembly, if any. */
+  links: Part[];
+  isSelected: boolean;
+  menuOpen: boolean;
+  /** `null` closes; the parent keeps this so only one menu is ever open. */
+  onOpenMenu: (id: string | null) => void;
+  actions: PartRowActions;
+}) {
+  const isDone = part.status === 'done';
+  const outOfStep = links.some((l) => l.status !== part.status);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = () => onOpenMenu(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen, onOpenMenu]);
+
+  const pick = (run: () => void) => () => {
+    run();
+    onOpenMenu(null);
+  };
+
+  return (
+    <div className={`${s.row} ${isSelected ? s.rowSelected : ''} ${isDone ? s.rowDone : ''}`}>
+      <button
+        className={`${s.check} ${isSelected ? s.checkOn : ''} ${isDone ? s.checkDone : ''}`}
+        disabled={isDone}
+        aria-label={`Select ${part.name}`}
+        aria-pressed={isSelected}
+        onClick={() => actions.onToggleSelect(part.id)}
+      >
+        {isDone && <span />}
+      </button>
+
+      <div className={s.partInfo}>
+        <span className={s.nameLine}>
+          <span className={s.partName}>{part.name}</span>
+          {links.length > 0 && (
+            <span
+              className={`${s.linkBadge} ${outOfStep ? s.linkBadgeOff : ''}`}
+              title={linkTitle(part, links)}
+            >
+              <LinkIcon />
+            </span>
+          )}
+        </span>
+        {part.note && <span className={s.partNote}>{part.note}</span>}
+      </div>
+
+      <StatusPill status={part.status} />
+      <span className={s.stamp}>{partTime(part)}</span>
+
+      <button
+        className={`${s.advance} ${menuOpen ? s.advanceOpen : ''}`}
+        aria-expanded={menuOpen}
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpenMenu(menuOpen ? null : part.id);
+        }}
+      >
+        Advance <span>▾</span>
+      </button>
+
+      {menuOpen && (
+        <div className={s.menu} onClick={(e) => e.stopPropagation()}>
+          <div className={s.menuKicker}>MOVE TO STEP</div>
+          {otherSteps(part.status).map((status) => {
+            const isNext = status === nextStatus(part.status);
+            return (
+              <button
+                key={status}
+                className={`${s.menuItem} ${isNext ? s.menuNext : ''}`}
+                onClick={pick(() => actions.onMove([part.id], status))}
+              >
+                <span className={s.menuDot} style={{ background: STATUS_TOKENS[status].solid }} />
+                {stepLabel(status)}
+                {isNext && <span className={s.menuTag}>next</span>}
+              </button>
+            );
+          })}
+
+          <div className={s.menuRule} />
+          <button className={s.menuItem} onClick={pick(() => actions.onRename(part))}>
+            Rename part
+          </button>
+          <button className={s.menuItem} onClick={pick(() => actions.onNote(part))}>
+            Notes &amp; details
+          </button>
+          <button className={s.menuItem} onClick={pick(() => actions.onLink(part.id))}>
+            {links.length ? `Edit link (${links.length + 1})` : 'Link part'}
+          </button>
+          <button
+            className={`${s.menuItem} ${s.menuDanger}`}
+            onClick={pick(() => actions.onDelete(part))}
+          >
+            Delete part
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

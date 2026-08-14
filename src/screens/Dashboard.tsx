@@ -1,4 +1,4 @@
-import type { Build } from '../types.ts';
+import type { Build, Screen } from '../types.ts';
 import {
   batchGroups,
   buildUpdatedAt,
@@ -13,8 +13,9 @@ import {
   timeLeft,
 } from '../derive.ts';
 import { SHELF } from '../seed.ts';
-import { Illustration, LeftRail, ShelfList, ui, type Screen } from '../ui/Shell.tsx';
+import { Illustration, LeftRail, ShelfList } from '../ui/Shell.tsx';
 import { StatusPill } from '../ui/StatusPill.tsx';
+import ui from '../ui/ui.module.css';
 import s from './dashboard.module.css';
 
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
@@ -31,7 +32,8 @@ export function Dashboard({
   onOpenBuild: (id: string) => void;
   onNewBuild: () => void;
 }) {
-  const recommended = recommendedGroup(batchGroups(builds));
+  const groups = batchGroups(builds);
+  const recommended = recommendedGroup(groups);
   const curing = curingParts(builds);
   const totalParts = builds.reduce((n, b) => n + b.parts.length, 0);
   const totalDone = builds.reduce((n, b) => n + partsDone(b), 0);
@@ -47,7 +49,7 @@ export function Dashboard({
             <div className={ui.railCopy}>
               {builds.length} builds on the bench,
               <br />
-              {partsWaitingOnYou(builds)} parts waiting on you
+              {partsWaitingOnYou(groups)} parts waiting on you
             </div>
             <button className={ui.btnFill} onClick={onNewBuild}>
               + New build

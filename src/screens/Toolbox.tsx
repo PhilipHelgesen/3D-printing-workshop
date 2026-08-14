@@ -1,17 +1,38 @@
-import { useState } from 'react';
-import type { ToolboxEntry } from '../types.ts';
+import { useMemo, useState } from 'react';
+import type { Screen, ToolboxEntry } from '../types.ts';
 import { isImported } from '../icons.ts';
-import { Illustration, LeftRail, ui, type Screen } from '../ui/Shell.tsx';
+import { Illustration, LeftRail } from '../ui/Shell.tsx';
+import ui from '../ui/ui.module.css';
 import s from './toolbox.module.css';
 
 type Filter = 'all' | 'favourites' | 'techniques';
+type SectionKey = 'favourites' | 'tools' | 'techniques';
+
+const FILTERS: { id: Filter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'favourites', label: 'Favourites' },
+  { id: 'techniques', label: 'Techniques' },
+];
 
 /** Section tint for the icon chip — favourites lemon, tools sea, techniques basil. */
-const SECTION_TINT = {
+const SECTION_TINT: Record<SectionKey, string> = {
   favourites: 'var(--lemon-tint)',
   tools: 'var(--sea-tint)',
   techniques: 'var(--basil-tint)',
 };
+
+/** Favourites float out of their kind and pin to the top; the rest split tool vs technique. */
+function split(entries: ToolboxEntry[]) {
+  const favourites: ToolboxEntry[] = [];
+  const tools: ToolboxEntry[] = [];
+  const techniques: ToolboxEntry[] = [];
+  for (const e of entries) {
+    if (e.favorite) favourites.push(e);
+    else if (e.kind === 'tool') tools.push(e);
+    else techniques.push(e);
+  }
+  return { favourites, tools, techniques };
+}
 
 export function Toolbox({
   entries,
@@ -29,38 +50,30 @@ export function Toolbox({
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
 
-  const q = query.trim().toLowerCase();
-  const found = entries.filter(
-    (e) => !q || e.name.toLowerCase().includes(q) || (e.note ?? '').toLowerCase().includes(q),
+  const stats = useMemo(
+    () => ({
+      tools: entries.filter((e) => e.kind === 'tool').length,
+      techniques: entries.filter((e) => e.kind === 'technique').length,
+      favourites: entries.filter((e) => e.favorite).length,
+    }),
+    [entries],
   );
 
-  const sections = (
-    [
-      {
-        key: 'favourites',
-        title: 'Favourites',
-        note: 'pinned to the top',
-        items: found.filter((e) => e.favorite),
-      },
-      {
-        key: 'tools',
-        title: 'Tools',
-        note: String(found.filter((e) => e.kind === 'tool' && !e.favorite).length),
-        items: found.filter((e) => e.kind === 'tool' && !e.favorite),
-      },
-      {
-        key: 'techniques',
-        title: 'Techniques',
-        note: 'how you like to do it',
-        items: found.filter((e) => e.kind === 'technique' && !e.favorite),
-      },
-    ] as { key: keyof typeof SECTION_TINT; title: string; note: string; items: ToolboxEntry[] }[]
-  ).filter(
-      (section) =>
-        filter === 'all' ||
-        (filter === 'favourites' && section.key === 'favourites') ||
-        (filter === 'techniques' && section.key === 'techniques'),
-    );
+  const sections = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const found = q
+      ? entries.filter(
+          (e) => e.name.toLowerCase().includes(q) || (e.note ?? '').toLowerCase().includes(q),
+        )
+      : entries;
+    const { favourites, tools, techniques } = split(found);
+    const all: { key: SectionKey; title: string; note: string; items: ToolboxEntry[] }[] = [
+      { key: 'favourites', title: 'Favourites', note: 'pinned to the top', items: favourites },
+      { key: 'tools', title: 'Tools', note: String(tools.length), items: tools },
+      { key: 'techniques', title: 'Techniques', note: 'how you like to do it', items: techniques },
+    ];
+    return filter === 'all' ? all : all.filter((section) => section.key === filter);
+  }, [entries, query, filter]);
 
   return (
     <div className={`${ui.page} ${ui.pageWide}`}>
@@ -83,18 +96,16 @@ export function Toolbox({
           <div className={ui.statRows}>
             <div className={ui.statRow}>
               <span>Tools</span>
-              <span className={ui.statValue}>{entries.filter((e) => e.kind === 'tool').length}</span>
+              <span className={ui.statValue}>{stats.tools}</span>
             </div>
             <div className={ui.statRow}>
               <span>Techniques</span>
-              <span className={ui.statValue}>
-                {entries.filter((e) => e.kind === 'technique').length}
-              </span>
+              <span className={ui.statValue}>{stats.techniques}</span>
             </div>
             <div className={ui.statRow}>
               <span>Favourites</span>
               <span className={ui.statValue} style={{ color: 'var(--lemon)' }}>
-                {entries.filter((e) => e.favorite).length}
+                {stats.favourites}
               </span>
             </div>
           </div>
@@ -116,23 +127,25 @@ export function Toolbox({
             <input
               className={s.search}
               placeholder="Search tools…"
+              aria-label="Search the toolbox"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
-            {(['all', 'favourites', 'techniques'] as Filter[]).map((f) => (
+            {FILTERS.map((f) => (
               <button
-                key={f}
-                className={`${s.filter} ${filter === f ? s.filterActive : ''}`}
-                onClick={() => setFilter(f)}
+                key={f.id}
+                className={`${s.filter} ${filter === f.id ? s.filterActive : ''}`}
+                aria-pressed={filter === f.id}
+                onClick={() => setFilter(f.id)}
               >
-                {f === 'all' ? 'All' : f === 'favourites' ? 'Favourites' : 'Techniques'}
+                {f.label}
               </button>
             ))}
           </div>
         </div>
 
         {sections.map((section) => (
-          <div key={section.key}>
+          <section key={section.key}>
             <div className={s.sectionHead}>
               <span className={s.sectionTitle}>{section.title}</span>
               <span className={s.sectionNote}>{section.note}</span>
@@ -142,14 +155,8 @@ export function Toolbox({
             ) : (
               <div className={s.grid}>
                 {section.items.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className={s.card}
-                    onClick={() => onEdit(entry)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && onEdit(entry)}
-                  >
+                  <div key={entry.id} className={s.card} onClick={() => onEdit(entry)}>
+                    {/* The pen is the keyboard/AT path to the same edit the card click does. */}
                     <button
                       className={s.pen}
                       aria-label={`Edit ${entry.name}`}
@@ -163,6 +170,7 @@ export function Toolbox({
                     <button
                       className={`${s.star} ${entry.favorite ? s.starOn : ''}`}
                       aria-label={`${entry.favorite ? 'Unstar' : 'Star'} ${entry.name}`}
+                      aria-pressed={entry.favorite}
                       onClick={(e) => {
                         e.stopPropagation();
                         onToggleFavorite(entry.id);
@@ -190,7 +198,7 @@ export function Toolbox({
                 ))}
               </div>
             )}
-          </div>
+          </section>
         ))}
       </div>
     </div>
