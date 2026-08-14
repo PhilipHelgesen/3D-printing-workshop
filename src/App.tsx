@@ -73,7 +73,6 @@ export default function App() {
           onNavigate={navigate}
           onOpenBuild={setOpenBuildId}
           onNewBuild={() => ask('Name the new build', '', store.addBuild)}
-          onBatch={store.advance}
         />
       )}
 

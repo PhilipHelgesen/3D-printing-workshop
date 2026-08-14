@@ -480,6 +480,30 @@
   margin-top: 6px;
 }
 
+.nextParts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.nextPart {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.55);
+  border: none;
+  border-radius: 10px;
+  padding: 8px 11px;
+  font: 600 12px var(--font-sans);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.nextPart:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
 .waitRow {
   display: flex;
   align-items: center;

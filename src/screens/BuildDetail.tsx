@@ -438,20 +438,22 @@ export function BuildDetail({
         {next && (
           <div className={s.nextCard} style={{ background: TONE_BG[next.tone] }}>
             <div className={s.nextKicker}>NEXT STEP</div>
-            <div className={s.nextTitle}>{next.text}</div>
+            <div className={s.nextTitle}>
+              {group ? `${group.verb} ${next.parts.length} ${next.parts.length === 1 ? 'part' : 'parts'}` : next.text}
+            </div>
             {elsewhere > 0 && group && (
               <div className={s.nextSub}>
                 {elsewhere} more parts elsewhere are ready for {group.noun} too.
               </div>
             )}
-            {group && group.parts.length > 0 && (
-              <button
-                className={ui.btnFill}
-                style={{ marginTop: 14 }}
-                onClick={() => onAdvance(group.parts.map((p) => p.id))}
-              >
-                Batch all {group.parts.length} ▸
-              </button>
+            {group && (
+              <div className={s.nextParts}>
+                {next.parts.map((p) => (
+                  <button key={p.id} className={s.nextPart} onClick={() => onAdvance([p.id])}>
+                    {p.name}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         )}
