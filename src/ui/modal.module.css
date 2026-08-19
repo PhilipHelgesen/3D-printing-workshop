@@ -331,3 +331,18 @@
   color: var(--muted);
   padding: 8px 4px;
 }
+
+.confirmText {
+  font: 400 13px/1.6 var(--font-sans);
+  color: var(--ink);
+}
+
+.destroy {
+  font: 700 12.5px var(--font-sans);
+  color: #fff;
+  background: var(--terra);
+  border: none;
+  border-radius: var(--radius-chip);
+  padding: 11px 22px;
+  cursor: pointer;
+}

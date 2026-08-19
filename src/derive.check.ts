@@ -50,13 +50,13 @@ assert.deepEqual(
   groups.map((g) => [g.label, g.parts.length, g.actionable]),
   [
     ['SPRAY PRIMER', 5, true],
-    ['SAND / SMOOTH', 7, true],
+    ['SANDING', 7, true],
     ['GLUE UP', 4, true],
     ['AIRBRUSH', 2, false], // 2 of 3 — not worth setting up yet
   ],
 );
 assert.equal(groups[3].parts.length < BATCH_THRESHOLD, true);
-// Belt buckle is smoothing but curing, blade halves is assembling but curing:
+// Belt buckle is sanding but curing, blade halves is assembling but curing:
 assert.equal(
   groups.some((g) => g.parts.some((p) => p.name === 'Belt buckle' || p.name === 'Blade halves')),
   false,
@@ -81,7 +81,7 @@ assert.deepEqual(
   statusPills(beskar).map((p) => [p.status, p.count]),
   [
     ['printing', 2],
-    ['smoothing', 3],
+    ['sanding', 3],
     ['priming', 2],
     ['queued', 1],
   ],
@@ -93,10 +93,10 @@ assert.deepEqual(
 assert.equal(Math.round(progressPct(pipboy)), 12);
 
 // —— the pipeline has no failure state; a broken part goes back to queued ——
-assert.equal(nextStatus('smoothing'), 'priming');
+assert.equal(nextStatus('sanding'), 'priming');
 assert.equal(nextStatus('done'), 'done');
-assert.deepEqual(otherSteps('smoothing'), ['queued', 'printing', 'priming', 'painting', 'assembling', 'done']);
-assert.deepEqual(otherSteps('done'), ['queued', 'printing', 'smoothing', 'priming', 'painting', 'assembling']);
+assert.deepEqual(otherSteps('sanding'), ['queued', 'printing', 'priming', 'painting', 'assembling', 'done']);
+assert.deepEqual(otherSteps('done'), ['queued', 'printing', 'sanding', 'priming', 'painting', 'assembling']);
 
 // —— assemblies: linking merges groups, unlinking never strands a lone member ——
 const state = seedState(now);
@@ -132,6 +132,15 @@ const ordered = groupLinked(sortByProgress(partsOf(trio)));
 const linkedAt = ordered.map((p, i) => (p.linkGroupId ? i : -1)).filter((i) => i >= 0);
 assert.deepEqual(linkedAt, [linkedAt[0], linkedAt[0] + 1, linkedAt[0] + 2]);
 assert.equal(ordered.length, partsOf(trio).length);
+
+// —— builds ——
+
+// Deleting a build takes its parts with it and leaves the others alone.
+const without = workshop.deleteBuild(state, hunter.id);
+assert.equal(without.builds.length, state.builds.length - 1);
+assert.equal(without.builds.some((b) => b.id === hunter.id), false);
+assert.equal(without.builds.flatMap((b) => b.parts).some((p) => p.buildId === hunter.id), false);
+assert.equal(without.toolbox.length, state.toolbox.length);
 
 // —— stamps ——
 const ago = (ms: number) => new Date(now - ms).toISOString();

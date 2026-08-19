@@ -7,6 +7,7 @@ import { Toolbox } from './screens/Toolbox.tsx';
 import { ToolboxModal } from './screens/ToolboxModal.tsx';
 import { AddPartModal } from './screens/AddPartModal.tsx';
 import { LinkPartModal } from './screens/LinkPartModal.tsx';
+import { DeleteBuildModal } from './screens/DeleteBuildModal.tsx';
 
 const blankEntry = (): ToolboxEntry => ({
   id: crypto.randomUUID(),
@@ -24,6 +25,7 @@ export default function App() {
   const [entryModal, setEntryModal] = useState<{ entry: ToolboxEntry; isNew: boolean } | null>(null);
   const [addingPart, setAddingPart] = useState(false);
   const [linkingPartId, setLinkingPartId] = useState<string | null>(null);
+  const [deletingBuild, setDeletingBuild] = useState(false);
 
   const navigate = (next: Screen) => {
     setOpenBuildId(null);
@@ -68,6 +70,7 @@ export default function App() {
             onBack={() => setOpenBuildId(null)}
             onAddPart={() => setAddingPart(true)}
             onRenameBuild={(name) => store.renameBuild(openBuild.id, name)}
+            onDeleteBuild={() => setDeletingBuild(true)}
             onAdvance={store.advance}
             onLinkPart={setLinkingPartId}
             rowActions={rowActions}
@@ -88,6 +91,19 @@ export default function App() {
           onToggleFavorite={store.toggleFavorite}
           onEdit={(entry) => setEntryModal({ entry, isNew: false })}
           onCreate={() => setEntryModal({ entry: blankEntry(), isNew: true })}
+        />
+      )}
+
+      {deletingBuild && openBuild && (
+        <DeleteBuildModal
+          name={openBuild.name}
+          partCount={openBuild.parts.length}
+          onConfirm={() => {
+            store.deleteBuild(openBuild.id);
+            setDeletingBuild(false);
+            setOpenBuildId(null); // the screen behind it is gone — fall back to the dashboard
+          }}
+          onClose={() => setDeletingBuild(false)}
         />
       )}
 

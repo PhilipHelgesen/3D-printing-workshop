@@ -107,6 +107,7 @@ export function useStore() {
       removeFromGroup: (id: string) => setState((s) => workshop.removeFromGroup(s, id)),
       addBuild: (name: string) => setState((s) => workshop.addBuild(s, name)),
       renameBuild: (id: string, name: string) => setState((s) => workshop.renameBuild(s, id, name)),
+      deleteBuild: (id: string) => setState((s) => workshop.deleteBuild(s, id)),
       toggleFavorite: (id: string) => setState((s) => workshop.toggleFavorite(s, id)),
       saveEntry: (draft: ToolboxEntry) => setState((s) => workshop.saveEntry(s, draft)),
       deleteEntry: (id: string) => setState((s) => workshop.deleteEntry(s, id)),
