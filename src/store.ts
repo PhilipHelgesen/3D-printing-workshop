@@ -7,10 +7,26 @@ import * as workshop from './workshop.ts';
 const KEY = 'nozzle.v1';
 const PUSH_DELAY_MS = 500;
 
+const normalizePartStatus = (status: string): PartStatus =>
+  status === 'smoothing' ? 'sanding' : (status as PartStatus);
+
+function normalizeState(state: State): State {
+  return {
+    ...state,
+    builds: state.builds.map((build) => ({
+      ...build,
+      parts: build.parts.map((part) => ({
+        ...part,
+        status: normalizePartStatus(part.status),
+      })),
+    })),
+  };
+}
+
 function loadLocal(): State {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw) as State;
+    if (raw) return normalizeState(JSON.parse(raw) as State);
   } catch {
     // corrupt or unreadable — fall back to a fresh workshop
   }
@@ -45,7 +61,7 @@ export function useStore() {
         }
         if (data?.state) {
           cloudJson.current = JSON.stringify(data.state);
-          setState(data.state as State);
+          setState(normalizeState(data.state as State));
         } else {
           cloudJson.current = ''; // nothing up there yet (or unreachable) — next change seeds it
         }

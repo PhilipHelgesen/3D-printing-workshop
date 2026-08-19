@@ -27,7 +27,7 @@ Open the HTML file in a browser to see all screens on one canvas; scroll to the 
 
 ```ts
 type PartStatus =
-  | 'queued' | 'printing' | 'smoothing' | 'priming'
+  | 'queued' | 'printing' | 'sanding' | 'priming'
   | 'painting' | 'assembling' | 'done';
 // NOTE: there is deliberately NO 'failed' status. If a part breaks the maker
 // moves it back to 'queued'. Do not add a failure state.
@@ -65,7 +65,7 @@ interface ToolboxEntry {
 - `progressPct = partsDone / parts.length * 100`
 - `statusCounts`: count per status, only non-zero ones are rendered as pills.
 - `suggestedNextStep(build)`: the highest-priority actionable group. Priority order used in the mocks: parts ready for the next manual operation (prime/glue/sand) → parts to print. Rendered as either `"Prime 2 parts — pauldron L/R"` or `"Print next: cheek plate R"`.
-- `batchGroups()`: **cross-build**. Group all parts whose next operation is the same (spray primer, sand/smooth, glue up, airbrush). A group is *actionable* at **≥3 parts** (the batch threshold); below that it renders greyed with "N of 3 — not worth setting up yet".
+- `batchGroups()`: **cross-build**. Group all parts whose next operation is the same (spray primer, sand, glue up, airbrush). A group is *actionable* at **≥3 parts** (the batch threshold); below that it renders greyed with "N of 3 — not worth setting up yet".
 
 ---
 
@@ -91,7 +91,7 @@ White card, `border-radius 18px`, `padding 18px 14px`, `box-shadow 0 6px 18px rg
 3. **Build cards** — 2-col grid, `gap 16px`. Each: white, `border-radius 18px`, `padding 18px`, shadow `0 6px 18px rgba(90,66,40,.07)`, flex column `gap 14px`.
    - **Progress donut** 66×66: `conic-gradient(<color> <pct>%, #eadfcd 0)` with a 7px inset white hole; inside, `partsDone` 14px `'IBM Plex Mono'` 600 tabular over `/total` 9px `#6d5f50`. Donut color: sea `#2e7c8c` normally, lemon `#a06f05` when the build's next action is a manual step, basil `#4f7268` when ≥85% done. (Simplify to one accent if you prefer — the metaphor is "layers building up", so a radial fill is the intent.)
    - Name 15.5px/700, "updated 14m ago" 10.5px `'IBM Plex Mono'` `#6d5f50`.
-   - **Status pills**, wrapping, `gap 6px`: pill = `border-radius 999px`, `padding 4px 10px`, 7px dot + count 11px `'IBM Plex Mono'` 600 + label 10px/600 `#6d5f50`, letter-spacing .04em. Backgrounds: printing `#b3d9e0`/dot `#2e7c8c`; priming & painting `#f7e3bd`/dot `#a06f05`; smoothing & queued `#edd5c0`/dot `#6d5f50`; done `#d6e3de`/dot `#4f7268`.
+   - **Status pills**, wrapping, `gap 6px`: pill = `border-radius 999px`, `padding 4px 10px`, 7px dot + count 11px `'IBM Plex Mono'` 600 + label 10px/600 `#6d5f50`, letter-spacing .04em. Backgrounds: printing `#b3d9e0`/dot `#2e7c8c`; priming & painting `#f7e3bd`/dot `#a06f05`; sanding & queued `#edd5c0`/dot `#6d5f50`; done `#d6e3de`/dot `#4f7268`.
    - **Next step block** — `border-radius 18px`, `padding 11px 13px`, background `#f7e3bd` (manual step) or `#b3d9e0` (print step). Kicker "NEXT STEP" 9px `'IBM Plex Mono'` 700, letter-spacing .16em, `#1f5a67`; text 13px/700 `#3a2a1c`.
 
 ### Right rail (292px)
@@ -117,7 +117,7 @@ Same brand + nav. Adds a **THIS BUILD** block: kicker 9.5px `'IBM Plex Mono'` 70
    - Back link "◂ Dashboard" 11px/700 `#2e7c8c`.
    - Build name 24px/700, letter-spacing -.015em; meta 11px `'IBM Plex Mono'` `#6d5f50`.
    - Right: `18` 30px `'IBM Plex Mono'` 600 tabular + `/26` 17px `#6d5f50`; kicker "PARTS DONE" 9px/700 letter-spacing .12em.
-   - **Stage flow chart** (the approved progress metaphor): a 96px-tall flex row, `gap 8px`, one column per status in pipeline order — QUEUE · PRINT · SMOOTH · PRIME · PAINT · ASSY · DONE. DONE column has `flex:1.5`, others `flex:1`. Each column: count on top (12px `'IBM Plex Mono'`, 600/`#3a2a1c` when >0, 400/`#6d5f50` when 0), then a bar `border-radius 6px` whose height is proportional to the count (empty = 5px `#eadfcd`), then the label 8.5px/700 letter-spacing .05em. Bar colors: print `#2e7c8c`, smooth/queue `#a08a72`, prime/paint `#a06f05`, done `#4f7268`.
+   - **Stage flow chart** (the approved progress metaphor): a 96px-tall flex row, `gap 8px`, one column per status in pipeline order — QUEUE · PRINT · SAND · PRIME · PAINT · ASSY · DONE. DONE column has `flex:1.5`, others `flex:1`. Each column: count on top (12px `'IBM Plex Mono'`, 600/`#3a2a1c` when >0, 400/`#6d5f50` when 0), then a bar `border-radius 6px` whose height is proportional to the count (empty = 5px `#eadfcd`), then the label 8.5px/700 letter-spacing .05em. Bar colors: print `#2e7c8c`, sand/queue `#a08a72`, prime/paint `#a06f05`, done `#4f7268`.
 2. **Filter row** — "Parts" 17px/700 and pill filters: **All 26** (active, `#2e7c8c`/white), **Needs me 8**, **Done 18** (white pills, `padding 6px 13px`).
 3. **Selection bar** (appears when ≥1 part is ticked) — `background #b3d9e0`, `border-radius 18px`, `padding 12px 16px`: "2 parts selected — both waiting on primer" 12.5px/700 `#1f5a67` + pill button **Prime them together ▸**.
 4. **Part rows** — flex column `gap 9px`. Each row: white, `border-radius 18px`, `padding 12px 14px`, shadow `0 2px 8px rgba(90,66,40,.05)`, flex `gap 13px`:
@@ -226,7 +226,7 @@ Transitions are quiet: `opacity .12s` on the pen, shadow transitions on hover. N
 --basil-tint: #d6e3de
 --terra:      #84572f   /* board brown — destructive, low stock */
 --terra-dark: #6d4526   /* timers on tinted grounds */
---neutral:    #a08a72   /* queued / smoothing dot */
+--neutral:    #a08a72   /* queued / sanding dot */
 --neutral-tint:#edd5c0  /* board peach */
 
 /* text */

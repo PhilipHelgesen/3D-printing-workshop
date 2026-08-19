@@ -3,7 +3,7 @@ import type { Build, Part, PartStatus } from './types.ts';
 export const PIPELINE: PartStatus[] = [
   'queued',
   'printing',
-  'smoothing',
+  'sanding',
   'priming',
   'painting',
   'assembling',
@@ -13,7 +13,7 @@ export const PIPELINE: PartStatus[] = [
 export const STATUS_LABEL: Record<PartStatus, string> = {
   queued: 'QUEUED',
   printing: 'PRINTING',
-  smoothing: 'SMOOTHING',
+  sanding: 'SANDING',
   priming: 'PRIMING',
   painting: 'PAINTING',
   assembling: 'ASSEMBLING',
@@ -24,7 +24,7 @@ export const STATUS_LABEL: Record<PartStatus, string> = {
 export const STATUS_TOKENS: Record<PartStatus, { tint: string; solid: string }> = {
   queued: { tint: 'var(--neutral-tint)', solid: 'var(--neutral)' },
   printing: { tint: 'var(--sea-tint)', solid: 'var(--sea)' },
-  smoothing: { tint: 'var(--neutral-tint)', solid: 'var(--neutral)' },
+  sanding: { tint: 'var(--neutral-tint)', solid: 'var(--neutral)' },
   priming: { tint: 'var(--lemon-tint)', solid: 'var(--lemon)' },
   painting: { tint: 'var(--lemon-tint)', solid: 'var(--lemon)' },
   assembling: { tint: 'var(--basil-tint)', solid: 'var(--basil)' },
@@ -35,7 +35,7 @@ export const STATUS_TOKENS: Record<PartStatus, { tint: string; solid: string }> 
 export const STAGES: { status: PartStatus; label: string }[] = [
   { status: 'queued', label: 'QUEUE' },
   { status: 'printing', label: 'PRINT' },
-  { status: 'smoothing', label: 'SMOOTH' },
+  { status: 'sanding', label: 'SAND' },
   { status: 'priming', label: 'PRIME' },
   { status: 'painting', label: 'PAINT' },
   { status: 'assembling', label: 'ASSY' },
@@ -45,7 +45,7 @@ export const STAGES: { status: PartStatus; label: string }[] = [
 /** The manual operations a batch session can be set up for. */
 export const STATIONS: { status: PartStatus; label: string; verb: string; noun: string }[] = [
   { status: 'priming', label: 'SPRAY PRIMER', verb: 'Prime', noun: 'primer' },
-  { status: 'smoothing', label: 'SAND / SMOOTH', verb: 'Sand', noun: 'sanding' },
+  { status: 'sanding', label: 'SANDING', verb: 'Sand', noun: 'sanding' },
   { status: 'assembling', label: 'GLUE UP', verb: 'Glue', noun: 'glue-up' },
   { status: 'painting', label: 'AIRBRUSH', verb: 'Airbrush', noun: 'paint' },
 ];
@@ -73,7 +73,7 @@ export const countByStatus = (parts: Part[], status: PartStatus) =>
 export function statusPills(b: Build): { status: PartStatus; count: number }[] {
   const order: PartStatus[] = [
     'printing',
-    'smoothing',
+    'sanding',
     'priming',
     'painting',
     'assembling',
@@ -117,7 +117,7 @@ export interface NextStep {
  * manual operation (prime → glue → sand) first, then parts waiting to print.
  */
 export function suggestedNextStep(b: Build): NextStep | null {
-  for (const status of ['priming', 'assembling', 'smoothing'] as PartStatus[]) {
+  for (const status of ['priming', 'assembling', 'sanding'] as PartStatus[]) {
     const parts = b.parts.filter((p) => p.status === status);
     if (!parts.length) continue;
     const station = STATIONS.find((s) => s.status === status)!;

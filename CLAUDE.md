@@ -140,7 +140,7 @@ server-side: this is a static SPA that talks to Supabase from the browser.
 
 These are product decisions, not accidents. Don't "fix" them.
 
-- **The pipeline is** `queued → printing → smoothing → priming → painting → assembling → done`.
+- **The pipeline is** `queued → printing → sanding → priming → painting → assembling → done`.
 - **There is no `failed` status.** A broken part goes back to `queued`. Never add
   a failure state.
 - **Any part can move to any step.** The Advance menu lists every other step —
