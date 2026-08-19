@@ -62,6 +62,17 @@ function StageFlow({ parts }: { parts: Part[] }) {
   );
 }
 
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M4 6.5h16" />
+      <path d="M9.5 6.5V4.5h5v2" />
+      <path d="M6.5 6.5 7.5 20h9l1-13.5" />
+      <path d="M10.5 10.5v6M13.5 10.5v6" />
+    </svg>
+  );
+}
+
 function BuildName({ name, onRename }: { name: string; onRename: (name: string) => void }) {
   const [draft, setDraft] = useState<string | null>(null);
 
@@ -106,6 +117,7 @@ export function BuildDetail({
   onBack,
   onAddPart,
   onRenameBuild,
+  onDeleteBuild,
   onAdvance,
   onLinkPart,
   rowActions,
@@ -116,6 +128,7 @@ export function BuildDetail({
   onBack: () => void;
   onAddPart: () => void;
   onRenameBuild: (name: string) => void;
+  onDeleteBuild: () => void;
   onAdvance: (ids: string[]) => void;
   onLinkPart: (id: string) => void;
   rowActions: Omit<PartRowActions, 'onToggleSelect' | 'onLink'>;
@@ -193,9 +206,15 @@ export function BuildDetail({
         active="dashboard"
         onNavigate={onNavigate}
         bottom={
-          <button className={ui.btnOutline} onClick={onAddPart}>
-            + Add part
-          </button>
+          <>
+            <button className={ui.btnDanger} onClick={onDeleteBuild}>
+              <TrashIcon />
+              Delete Project
+            </button>
+            <button className={ui.btnOutline} onClick={onAddPart}>
+              + Add part
+            </button>
+          </>
         }
       >
         <div className={ui.railBlock}>

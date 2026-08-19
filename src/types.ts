@@ -1,7 +1,7 @@
 export type PartStatus =
   | 'queued'
   | 'printing'
-  | 'smoothing'
+  | 'sanding'
   | 'priming'
   | 'painting'
   | 'assembling'

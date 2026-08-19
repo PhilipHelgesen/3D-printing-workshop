@@ -204,3 +204,23 @@
   color: var(--ink);
 }
 
+.btnDanger {
+  width: 100%;
+  margin-bottom: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font: 700 12.5px var(--font-sans);
+  color: var(--terra);
+  background: transparent;
+  border: 1px solid var(--terra);
+  border-radius: var(--radius-chip);
+  padding: 10px;
+  cursor: pointer;
+}
+
+.btnDanger svg {
+  width: 15px;
+  height: 15px;
+}

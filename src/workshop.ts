@@ -103,6 +103,12 @@ export const addBuild = (state: State, name: string): State => ({
 export const renameBuild = (state: State, id: string, name: string): State =>
   mapBuilds(state, (b) => (b.id === id ? { ...b, name } : b));
 
+/** Deleting a build takes its parts with it — there is nowhere else for them to live. */
+export const deleteBuild = (state: State, id: string): State => ({
+  ...state,
+  builds: state.builds.filter((b) => b.id !== id),
+});
+
 // ——— toolbox ———
 
 export const toggleFavorite = (state: State, id: string): State => ({
