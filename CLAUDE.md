@@ -52,10 +52,10 @@ workshop.ts     pure write-side: (state, args) => state for every mutation
    ↑
 store.ts        React glue — useState + localStorage + Supabase sync
    ↑
-App.tsx         screen switching, modal state, wires store actions to screens
+App.tsx         session gate, then screen switching, modal state, store wiring
    ↑
 screens/        one file per screen + its modals; owns view state only
-ui/             shared chrome: LeftRail, Modal, StatusPill, ui.module.css
+ui/             shared chrome: LeftRail, Modal, StatusPill, SignIn, ui.module.css
 ```
 
 **The rule that matters: business logic never lives in a component.** If you're
@@ -112,9 +112,12 @@ the SQL Editor if you ever rebuild the project.
   WebP client-side (~2 KB each) and stored as public URLs in `ToolboxEntry.iconId`.
   Anything starting with `http` or `data:` is an imported image; `a`/`b`/`c` are
   the built-in swatches.
-- **No auth.** RLS policies allow anonymous read/write. Acceptable only because
-  the URL is unlisted and it's a single-user tool — if this is ever shared,
-  add Supabase Auth and key the policies on `auth.uid()`.
+- **Auth is required.** The repo is public and the anon key ships in the client
+  bundle, so every policy is scoped `to authenticated` — a policy without that
+  clause defaults to `to public`, which includes `anon`. One Supabase Auth user,
+  email + password. `App.tsx` gates the whole app on a session, so nothing is
+  ever requested as `anon`. Icon *reads* stay public because `<img src>` can't
+  send a header.
 
 ### Environment
 

@@ -224,3 +224,61 @@
   width: 15px;
   height: 15px;
 }
+
+/* Sign-in gate — centred card on the bare ground. No rail: there is nothing to
+   navigate to until there's a session. */
+.signInPage {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.signInCard {
+  width: 100%;
+  max-width: 320px;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+}
+
+.signInTitle {
+  font: 700 17px var(--font-sans);
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.signInSub {
+  font: 400 12.5px var(--font-sans);
+  color: var(--muted);
+  margin: 0 0 18px;
+}
+
+.signInField {
+  composes: field from './modal.module.css';
+  margin-bottom: 10px;
+}
+
+.signInError {
+  font: 600 12px var(--font-sans);
+  color: var(--terra-dark);
+  margin: 10px 0 0;
+}
+
+.signOut {
+  width: 100%;
+  margin-top: 10px;
+  font: 700 11px var(--font-sans);
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius-chip);
+  padding: 8px;
+  cursor: pointer;
+}
+
+.signOut:hover {
+  color: var(--ink);
+  background: var(--surface-sunk);
+}

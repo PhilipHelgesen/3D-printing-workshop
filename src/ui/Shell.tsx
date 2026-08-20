@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Screen } from '../types.ts';
+import { supabase } from '../supabase.ts';
 import s from './ui.module.css';
 
 const NAV: { id: Screen; label: string }[] = [
@@ -67,7 +68,14 @@ export function LeftRail({
         </button>
       ))}
       {children}
-      {bottom && <div className={s.railBottom}>{bottom}</div>}
+      <div className={s.railBottom}>
+        {bottom}
+        {/* Lives here rather than being threaded through all three screens as a
+            prop — every screen renders the rail, none of them care about auth. */}
+        <button className={s.signOut} onClick={() => supabase.auth.signOut()}>
+          Sign out
+        </button>
+      </div>
     </nav>
   );
 }

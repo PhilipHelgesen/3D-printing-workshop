@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import type { Part, Screen, ToolboxEntry } from './types.ts';
 import { useStore } from './store.ts';
+import { supabase } from './supabase.ts';
+import { SignIn } from './ui/SignIn.tsx';
 import { Dashboard } from './screens/Dashboard.tsx';
 import { BuildDetail } from './screens/BuildDetail.tsx';
 import { Toolbox } from './screens/Toolbox.tsx';
@@ -17,7 +20,28 @@ const blankEntry = (): ToolboxEntry => ({
   favorite: false,
 });
 
+/**
+ * Session gate. `undefined` means the stored session hasn't been read back yet
+ * — distinct from `null` (definitely signed out), so a returning maker never
+ * gets a flash of the sign-in form before their session restores.
+ *
+ * Workshop mounts only once there is a session, which also keeps useStore's
+ * cloud pull from firing as `anon` and quietly failing.
+ */
 export default function App() {
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  if (session === undefined) return null;
+  return session ? <Workshop /> : <SignIn />;
+}
+
+function Workshop() {
   const store = useStore();
   const { builds, toolbox } = store.state;
   const [screen, setScreen] = useState<Screen>('dashboard');
