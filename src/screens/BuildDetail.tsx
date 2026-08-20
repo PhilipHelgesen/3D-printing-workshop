@@ -5,7 +5,7 @@ import {
   STATIONS,
   STATUS_TOKENS,
   assemblies,
-  batchGroups,
+  buildPlan,
   buildUpdatedAt,
   countByStatus,
   daysUntil,
@@ -14,7 +14,6 @@ import {
   shortDate,
   siblings,
   sortByProgress,
-  suggestedNextStep,
   timeAgo,
 } from '../derive.ts';
 import { LeftRail } from '../ui/Shell.tsx';
@@ -137,9 +136,7 @@ export function BuildDetail({
   const [showAll, setShowAll] = useState(false);
 
   const done = partsDone(build);
-  const next = suggestedNextStep(build);
-  const group = next ? batchGroups(builds).find((g) => g.status === next.status) : undefined;
-  const elsewhere = group ? group.parts.filter((p) => p.buildId !== build.id).length : 0;
+  const plan = buildPlan(build, builds);
 
   const byGroup = useMemo(() => assemblies(build.parts), [build.parts]);
 
@@ -318,22 +315,14 @@ export function BuildDetail({
       </div>
 
       <div className={ui.col}>
-        {next && (
-          <div className={s.nextCard} style={{ background: TONE_BG[next.tone] }}>
+        {plan && (
+          <div className={s.nextCard} style={{ background: TONE_BG[plan.tone] }}>
             <div className={s.nextKicker}>NEXT STEP</div>
-            <div className={s.nextTitle}>
-              {group
-                ? `${group.verb} ${next.parts.length} ${next.parts.length === 1 ? 'part' : 'parts'}`
-                : next.text}
-            </div>
-            {elsewhere > 0 && group && (
-              <div className={s.nextSub}>
-                {elsewhere} more parts elsewhere are ready for {group.noun} too.
-              </div>
-            )}
-            {group && (
+            <div className={s.nextTitle}>{plan.title}</div>
+            {plan.subtitle && <div className={s.nextSub}>{plan.subtitle}</div>}
+            {plan.parts.length > 0 && (
               <div className={s.nextParts}>
-                {next.parts.map((p) => (
+                {plan.parts.map((p) => (
                   <button key={p.id} className={s.nextPart} onClick={() => onAdvance([p.id])}>
                     {p.name}
                   </button>

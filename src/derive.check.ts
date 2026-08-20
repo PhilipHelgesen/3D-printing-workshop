@@ -4,6 +4,7 @@ import {
   BATCH_THRESHOLD,
   assemblies,
   batchGroups,
+  buildPlan,
   groupLinked,
   nextStatus,
   otherSteps,
@@ -14,7 +15,6 @@ import {
   siblings,
   sortByProgress,
   statusPills,
-  suggestedNextStep,
   timeAgo,
 } from './derive.ts';
 import { seedState } from './seed.ts';
@@ -60,15 +60,29 @@ assert.equal(recommendedGroup(groups)?.label, 'SPRAY PRIMER');
 assert.equal(recommendedGroup(groups)?.buildCount, 3);
 assert.equal(partsWaitingOnYou(groups), 20);
 
-// —— suggested next step: prime → glue → sand, then print ——
-assert.equal(suggestedNextStep(beskar)?.text, 'Prime 2 parts — pauldron L, pauldron R');
-assert.equal(suggestedNextStep(hunter)?.text, 'Prime 2 parts — cheek plate L, cheek plate R');
-assert.equal(suggestedNextStep(sword)?.text, 'Glue blade halves');
-assert.equal(suggestedNextStep(sword)?.tone, 'glue');
+// —— the build plan: prime → glue → sand, then print ——
+assert.equal(buildPlan(beskar, builds)?.title, 'Prime 2 parts');
+assert.equal(buildPlan(hunter, builds)?.title, 'Prime 2 parts');
+assert.equal(buildPlan(sword, builds)?.tone, 'glue');
+
+// The count in the subtitle is the same operation stacked up in the OTHER builds.
+assert.equal(buildPlan(beskar, builds)?.subtitle, '3 more parts elsewhere are ready for primer too.');
+// Alone, a build has nothing to batch with — no subtitle at all.
+assert.equal(buildPlan(beskar, [beskar])?.subtitle, null);
+// Every part the card offers belongs to this build; the elsewhere ones are only counted.
 assert.equal(
-  suggestedNextStep({ ...beskar, parts: beskar.parts.filter((p) => p.status === 'queued') })?.text,
-  'Print next: gauntlet, left',
+  buildPlan(beskar, builds)?.parts.every((p) => p.buildId === beskar.id),
+  true,
 );
+
+// A print is named, not offered — there is nothing to tick off until it comes off the bed.
+const queuedOnly = { ...beskar, parts: beskar.parts.filter((p) => p.status === 'queued') };
+assert.equal(buildPlan(queuedOnly, builds)?.title, 'Print next: gauntlet, left');
+assert.deepEqual(buildPlan(queuedOnly, builds)?.parts, []);
+assert.equal(buildPlan(queuedOnly, builds)?.subtitle, null);
+
+// Nothing left to do at all.
+assert.equal(buildPlan({ ...beskar, parts: [] }, builds), null);
 
 // —— pills: pipeline order, queued last, DONE only once a build is finishing ——
 assert.deepEqual(

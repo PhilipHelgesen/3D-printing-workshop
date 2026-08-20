@@ -96,13 +96,7 @@ export const otherSteps = (s: PartStatus): PartStatus[] => PIPELINE.filter((stat
 
 const lower = (name: string) => name.charAt(0).toLowerCase() + name.slice(1);
 
-const nameList = (parts: Part[]) => {
-  const shown = parts.slice(0, 3).map((p) => lower(p.name));
-  return parts.length > 3 ? `${shown.join(', ')}…` : shown.join(', ');
-};
-
-export interface NextStep {
-  text: string;
+interface NextStep {
   tone: 'manual' | 'glue' | 'print';
   status: PartStatus;
   parts: Part[];
@@ -111,31 +105,58 @@ export interface NextStep {
 /**
  * The highest-priority actionable group in a build: parts ready for the next
  * manual operation (prime → glue → sand) first, then parts waiting to print.
+ * Private — `buildPlan` is how the screens ask this; `progressColor` wants the tone.
  */
-export function suggestedNextStep(b: Build): NextStep | null {
+function suggestedNextStep(b: Build): NextStep | null {
   for (const status of ['priming', 'assembling', 'sanding'] as PartStatus[]) {
     const parts = b.parts.filter((p) => p.status === status);
     if (!parts.length) continue;
-    const station = STATIONS.find((s) => s.status === status)!;
-    return {
-      text:
-        parts.length === 1
-          ? `${station.verb} ${lower(parts[0].name)}`
-          : `${station.verb} ${parts.length} parts — ${nameList(parts)}`,
-      tone: status === 'assembling' ? 'glue' : 'manual',
-      status,
-      parts,
-    };
+    return { tone: status === 'assembling' ? 'glue' : 'manual', status, parts };
   }
   const queued = b.parts.filter((p) => p.status === 'queued');
-  if (queued.length)
-    return {
-      text: `Print next: ${lower(queued[0].name)}`,
-      tone: 'print',
-      status: 'queued',
-      parts: queued.slice(0, 1),
-    };
+  if (queued.length) return { tone: 'print', status: 'queued', parts: queued.slice(0, 1) };
   return null;
+}
+
+export interface BuildPlan {
+  title: string;
+  /** How much of the same operation is stacked up in other builds, or null. */
+  subtitle: string | null;
+  tone: 'manual' | 'glue' | 'print';
+  /** Parts the card offers to tick off — empty when the next move is a print. */
+  parts: Part[];
+}
+
+/**
+ * The whole "next step" card for one build: what to do, whether it batches with
+ * the other builds, and which parts it clears. One call, so the wording and the
+ * elsewhere count can't drift apart the way they did when the screen composed them.
+ */
+export function buildPlan(build: Build, builds: Build[]): BuildPlan | null {
+  const next = suggestedNextStep(build);
+  if (!next) return null;
+
+  // A print isn't something the maker does at a station — name it and offer nothing.
+  if (next.tone === 'print')
+    return {
+      title: `Print next: ${lower(next.parts[0].name)}`,
+      subtitle: null,
+      tone: next.tone,
+      parts: [],
+    };
+
+  const station = STATIONS.find((s) => s.status === next.status)!;
+  const elsewhere = builds
+    .filter((b) => b.id !== build.id)
+    .reduce((n, b) => n + countByStatus(b.parts, next.status), 0);
+
+  return {
+    title: `${station.verb} ${next.parts.length} ${next.parts.length === 1 ? 'part' : 'parts'}`,
+    subtitle:
+      elsewhere > 0 ? `${elsewhere} more parts elsewhere are ready for ${station.noun} too.` : null,
+    tone: next.tone,
+    parts: next.parts,
+  };
 }
 
 export interface BatchGroup {

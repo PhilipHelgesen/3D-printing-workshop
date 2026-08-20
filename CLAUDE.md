@@ -70,7 +70,7 @@ store's action object, one assert in `derive.check.ts`, then the UI.
 
 - `types.ts` — `Part`, `Build`, `ToolboxEntry`, `State`, `Screen`.
 - `derive.ts` — everything computed, never stored: `progressPct`, `statusPills`,
-  `suggestedNextStep`, `batchGroups`, `assemblies`, `timeAgo`, …
+  `buildPlan`, `batchGroups`, `assemblies`, `timeAgo`, …
 - `workshop.ts` — `moveTo`, `advance`, `addPart`, `linkParts`, `saveEntry`, …
   Pure apart from `crypto.randomUUID()` / `new Date()`.
 - `store.ts` — `useStore()`: state, persistence, and the bound action object.
@@ -155,6 +155,10 @@ These are product decisions, not accidents. Don't "fix" them.
 - **Batch groups are cross-build** and only actionable at **3+ parts**
   (`BATCH_THRESHOLD`). The recommended group is the one clearing the most builds,
   count breaking ties.
+- **A build plan** is the answer to "what do I do next on this build" — the
+  operation, whether it batches with the other builds, and the parts it clears.
+  `buildPlan(build, builds)` composes the whole card; the screens never assemble
+  that wording or count themselves.
 - **Assemblies**: parts sharing a `linkGroupId` should stay on the same step
   (e.g. gauntlet LED + finger + hand). Any size, not just pairs. Linking a part
   that already belongs to a group merges the two groups. A group of one is
