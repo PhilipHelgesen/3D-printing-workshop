@@ -54,10 +54,6 @@ export const BATCH_THRESHOLD = 3;
 /** At or above this share of parts done, a build reads as finishing. */
 export const NEARLY_DONE = 0.85;
 
-/** A part is hands-off while it cures — or while its print is still running. */
-export const isHandsOff = (p: Part, now = Date.now()) =>
-  !!p.curingUntil && Date.parse(p.curingUntil) > now;
-
 export const partsDone = (b: Build) => b.parts.filter((p) => p.status === 'done').length;
 
 export const progressPct = (b: Build) =>
@@ -153,16 +149,13 @@ export interface BatchGroup {
 }
 
 /**
- * Cross-build: every part whose next operation is the same station. Parts that
- * are curing (or still printing) are hands-off and don't count. A group is only
- * worth setting up at BATCH_THRESHOLD parts. Recommended group first — the one
- * clearing the most builds in one setup, count breaking ties.
+ * Cross-build: every part whose next operation is the same station. A group is
+ * only worth setting up at BATCH_THRESHOLD parts. Recommended group first — the
+ * one clearing the most builds in one setup, count breaking ties.
  */
-export function batchGroups(builds: Build[], now = Date.now()): BatchGroup[] {
+export function batchGroups(builds: Build[]): BatchGroup[] {
   const groups = STATIONS.map((station) => {
-    const parts = builds.flatMap((b) =>
-      b.parts.filter((p) => p.status === station.status && !isHandsOff(p, now)),
-    );
+    const parts = builds.flatMap((b) => b.parts.filter((p) => p.status === station.status));
     return {
       ...station,
       parts,
@@ -195,20 +188,8 @@ export function timeAgo(iso: string, now = Date.now()): string {
   return shortDate(iso);
 }
 
-/** "1h 40m" left on a run — minutes only under an hour. */
-export function timeLeft(iso: string, now = Date.now()): string {
-  const mins = Math.max(0, Math.round((Date.parse(iso) - now) / MIN));
-  return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
-}
-
 export const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-
-/** Timestamp column on a part row. */
-export function partTime(p: Part, now = Date.now()): string {
-  if (p.status === 'printing' && isHandsOff(p, now)) return `running ${timeLeft(p.curingUntil!, now)}`;
-  return timeAgo(p.updatedAt, now);
-}
 
 export const buildUpdatedAt = (b: Build) =>
   b.parts.reduce((max, p) => (p.updatedAt > max ? p.updatedAt : max), b.startedAt);
@@ -216,10 +197,6 @@ export const buildUpdatedAt = (b: Build) =>
 export function daysUntil(iso: string, now = Date.now()): number {
   return Math.round((Date.parse(iso) - now) / (24 * 60 * MIN));
 }
-
-/** Parts that are hands-off for a reason other than a running print. */
-export const curingParts = (builds: Build[], now = Date.now()) =>
-  builds.flatMap((b) => b.parts.filter((p) => p.status !== 'printing' && isHandsOff(p, now)));
 
 /**
  * Assembly members by link group id — one pass, so callers can look a part's

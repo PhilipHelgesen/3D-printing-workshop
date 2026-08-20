@@ -147,23 +147,3 @@
   flex-wrap: wrap;
   gap: 6px;
 }
-
-/* right rail */
-
-.curing {
-  background: var(--lemon-tint);
-  border-radius: var(--radius-card);
-  padding: 18px;
-  flex: none;
-}
-
-.curingBody {
-  font: 400 11.5px/1.6 var(--font-mono);
-  color: var(--muted);
-  margin-top: 6px;
-}
-
-.curingTimer {
-  color: var(--terra-dark);
-  font-weight: 600;
-}

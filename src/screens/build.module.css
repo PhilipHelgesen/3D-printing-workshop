@@ -503,32 +503,3 @@
 .nextPart:hover {
   background: rgba(255, 255, 255, 0.85);
 }
-
-.waitRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  background: var(--basil-tint);
-  border-radius: var(--radius-card);
-  padding: 11px 13px;
-}
-
-.waitDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--basil);
-  flex: none;
-}
-
-.waitName {
-  font: 700 12px var(--font-sans);
-  color: var(--ink);
-}
-
-.waitNote {
-  font: 400 10.5px var(--font-mono);
-  color: var(--muted);
-  margin-top: 2px;
-}

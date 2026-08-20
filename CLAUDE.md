@@ -148,8 +148,10 @@ These are product decisions, not accidents. Don't "fix" them.
   a failure state.
 - **Any part can move to any step.** The Advance menu lists every other step —
   rework jumps backwards, and a part in assembling can go straight to painting.
-- **`curingUntil` means "hands off until"** and covers both curing glue/filler and
-  a running print. Such parts are excluded from batch groups.
+- **There is no curing or "hands off" concept.** No cure timer, no print ETA, no
+  part is ever unavailable — every part at a station is workable right now. The
+  old `curingUntil` field was deleted along with everything that read it: it had
+  no writer, so it only ever described mock data. Never re-add scheduling here.
 - **Batch groups are cross-build** and only actionable at **3+ parts**
   (`BATCH_THRESHOLD`). The recommended group is the one clearing the most builds,
   count breaking ties.
@@ -176,8 +178,10 @@ The UI has since deliberately diverged from the handoff in places: the dashboard
 lost its batch panel, per-card next-step block and materials card; the build page
 lost its "For the next step" materials card; toolbox cards went horizontal; nav
 lost Materials. **Materials are not modelled at all** — the old cards were
-hardcoded placeholder lists and were deleted rather than left lying. Current code
-wins over the handoff where they disagree.
+hardcoded placeholder lists and were deleted rather than left lying. The
+handoff's "Curing — hands off" rail and the build page's "Waiting" card are gone
+too, with the whole curing concept behind them. Current code wins over the
+handoff where they disagree.
 
 ---
 

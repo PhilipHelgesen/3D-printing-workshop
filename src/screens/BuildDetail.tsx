@@ -8,17 +8,14 @@ import {
   batchGroups,
   buildUpdatedAt,
   countByStatus,
-  curingParts,
   daysUntil,
   groupLinked,
-  isHandsOff,
   partsDone,
   shortDate,
   siblings,
   sortByProgress,
   suggestedNextStep,
   timeAgo,
-  timeLeft,
 } from '../derive.ts';
 import { LeftRail } from '../ui/Shell.tsx';
 import { PartRow, type PartRowActions } from './PartRow.tsx';
@@ -143,7 +140,6 @@ export function BuildDetail({
   const next = suggestedNextStep(build);
   const group = next ? batchGroups(builds).find((g) => g.status === next.status) : undefined;
   const elsewhere = group ? group.parts.filter((p) => p.buildId !== build.id).length : 0;
-  const waiting = curingParts([build]);
 
   const byGroup = useMemo(() => assemblies(build.parts), [build.parts]);
 
@@ -344,23 +340,6 @@ export function BuildDetail({
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {waiting.length > 0 && (
-          <div className={ui.card} style={{ flex: 'none' }}>
-            <div className={ui.cardTitle}>Waiting</div>
-            {waiting.map((p) => (
-              <div key={p.id} className={s.waitRow}>
-                <span className={s.waitDot} />
-                <div>
-                  <div className={s.waitName}>{p.name}</div>
-                  <div className={s.waitNote}>
-                    {isHandsOff(p) ? `curing — free in ${timeLeft(p.curingUntil!)}` : 'ready'}
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         )}
       </div>

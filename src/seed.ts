@@ -6,7 +6,7 @@ const DAY = 24 * HOUR;
 
 /**
  * Mock workshop, seeded relative to first load so "14m ago" reads right.
- * Numbers match the handoff: 62 parts, 31 done, and batch groups of 5/7/4/2.
+ * Numbers match the handoff: 62 parts, 31 done, and batch groups of 5/8/5/2.
  */
 export function seedState(now = Date.now()): State {
   const ago = (ms: number) => new Date(now - ms).toISOString();
@@ -18,20 +18,19 @@ export function seedState(now = Date.now()): State {
     name: string,
     startedAt: string,
     deadline: string | undefined,
-    parts: [string, PartStatus, number, { curingUntil?: string }?][],
+    parts: [string, PartStatus, number][],
   ): Build => ({
     id,
     name,
     startedAt,
     deadline,
     parts: parts.map(
-      ([partName, status, agoMs, extra]): Part => ({
+      ([partName, status, agoMs]): Part => ({
         id: `p${++seq}`,
         buildId: id,
         name: partName,
         status,
         updatedAt: ago(agoMs),
-        ...extra,
       }),
     ),
   });
@@ -46,12 +45,12 @@ export function seedState(now = Date.now()): State {
         ['Pauldron R', 'priming', 2 * HOUR],
         ['Vambrace, left', 'sanding', 26 * HOUR],
         ['Vambrace, right', 'sanding', 26 * HOUR],
-        ['Knee, right', 'printing', 14 * MIN, { curingUntil: inMs(100 * MIN) }],
-        ['Cod piece', 'printing', 40 * MIN, { curingUntil: inMs(22 * MIN) }],
+        ['Knee, right', 'printing', 14 * MIN],
+        ['Cod piece', 'printing', 40 * MIN],
         ['Gauntlet, left', 'queued', 3 * DAY],
         ['Helmet dome', 'done', 68 * DAY],
         ['Chest plate', 'done', 66 * DAY],
-        ['Belt buckle', 'sanding', 5 * HOUR, { curingUntil: inMs(190 * MIN) }],
+        ['Belt buckle', 'sanding', 5 * HOUR],
         ...done(
           [
             'Backplate',
@@ -75,7 +74,7 @@ export function seedState(now = Date.now()): State {
         ),
       ]),
       build('b2', 'Hunter Helmet v3', ago(40 * DAY), undefined, [
-        ['Chin vent', 'printing', 2 * HOUR, { curingUntil: inMs(55 * MIN) }],
+        ['Chin vent', 'printing', 2 * HOUR],
         ['Mandible', 'painting', 5 * HOUR],
         ['Brow plate', 'painting', 6 * HOUR],
         ['Cheek plate L', 'priming', 8 * HOUR],
@@ -85,7 +84,7 @@ export function seedState(now = Date.now()): State {
         ...done(['Dome shell', 'Visor frame', 'Ear cap L', 'Ear cap R'], 30 * DAY),
       ]),
       build('b3', 'Energy Sword Prop', ago(55 * DAY), undefined, [
-        ['Blade halves', 'assembling', 3 * DAY, { curingUntil: inMs(190 * MIN) }],
+        ['Blade halves', 'assembling', 3 * DAY],
         ...done(
           ['Hilt shell L', 'Hilt shell R', 'Emitter', 'Grip wrap', 'Blade core', 'Power cell', 'Guard'],
           20 * DAY,

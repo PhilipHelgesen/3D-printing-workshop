@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { Part, PartStatus } from '../types.ts';
-import { STATUS_LABEL, STATUS_TOKENS, nextStatus, otherSteps, partTime } from '../derive.ts';
+import { STATUS_LABEL, STATUS_TOKENS, nextStatus, otherSteps, timeAgo } from '../derive.ts';
 import { StatusPill } from '../ui/StatusPill.tsx';
 import s from './build.module.css';
 
@@ -98,7 +98,7 @@ export function PartRow({
       </div>
 
       <StatusPill status={part.status} />
-      <span className={s.stamp}>{partTime(part)}</span>
+      <span className={s.stamp}>{timeAgo(part.updatedAt)}</span>
 
       <button
         className={`${s.advance} ${menuOpen ? s.advanceOpen : ''}`}

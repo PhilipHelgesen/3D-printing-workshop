@@ -2,7 +2,6 @@ import type { Build, Screen } from '../types.ts';
 import {
   batchGroups,
   buildUpdatedAt,
-  curingParts,
   partsDone,
   partsWaitingOnYou,
   progressColor,
@@ -10,7 +9,6 @@ import {
   recommendedGroup,
   statusPills,
   timeAgo,
-  timeLeft,
 } from '../derive.ts';
 import { Illustration, LeftRail } from '../ui/Shell.tsx';
 import { StatusPill } from '../ui/StatusPill.tsx';
@@ -33,13 +31,11 @@ export function Dashboard({
 }) {
   const groups = batchGroups(builds);
   const recommended = recommendedGroup(groups);
-  const curing = curingParts(builds);
   const totalParts = builds.reduce((n, b) => n + b.parts.length, 0);
   const totalDone = builds.reduce((n, b) => n + partsDone(b), 0);
 
   return (
-    // Nothing curing means no right rail — drop the third column rather than leave a gutter.
-    <div className={`${ui.page} ${curing.length === 0 ? ui.pageWide : ''}`}>
+    <div className={`${ui.page} ${ui.pageWide}`}>
       <LeftRail
         active="dashboard"
         onNavigate={onNavigate}
@@ -109,22 +105,6 @@ export function Dashboard({
           ))}
         </div>
       </div>
-
-      {curing.length > 0 && (
-        <div className={ui.col}>
-          <div className={s.curing}>
-            <div className={ui.cardTitle}>Curing — hands off</div>
-            <div className={s.curingBody}>
-              {curing.map((p) => p.name).join(' · ')}
-              <br />
-              free in{' '}
-              <span className={s.curingTimer}>
-                {timeLeft(curing.map((p) => p.curingUntil!).sort()[0])}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

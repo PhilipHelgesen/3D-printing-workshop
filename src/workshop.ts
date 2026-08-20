@@ -36,16 +36,12 @@ function pruneLoneGroups(parts: Part[]): Part[] {
 
 // ——— parts ———
 
-/** Moving a part stamps it and hands it back to the maker — any running print or cure is void. */
 export const moveTo = (state: State, ids: string[], status: PartStatus): State =>
-  mapParts(state, only(ids, (p) => ({ ...p, status, updatedAt: now(), curingUntil: undefined })));
+  mapParts(state, only(ids, (p) => ({ ...p, status, updatedAt: now() })));
 
 /** Finish the current operation on these parts — each moves one step down the pipeline. */
 export const advance = (state: State, ids: string[]): State =>
-  mapParts(
-    state,
-    only(ids, (p) => ({ ...p, status: nextStatus(p.status), updatedAt: now(), curingUntil: undefined })),
-  );
+  mapParts(state, only(ids, (p) => ({ ...p, status: nextStatus(p.status), updatedAt: now() })));
 
 export const renamePart = (state: State, id: string, name: string): State =>
   mapParts(state, only([id], (p) => ({ ...p, name })));

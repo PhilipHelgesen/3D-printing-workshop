@@ -16,7 +16,6 @@ import {
   statusPills,
   suggestedNextStep,
   timeAgo,
-  timeLeft,
 } from './derive.ts';
 import { seedState } from './seed.ts';
 import * as workshop from './workshop.ts';
@@ -44,27 +43,22 @@ assert.deepEqual(
   ],
 );
 
-// —— batch groups are cross-build, hands-off parts don't count ——
-const groups = batchGroups(builds, now);
+// —— batch groups are cross-build ——
+const groups = batchGroups(builds);
 assert.deepEqual(
   groups.map((g) => [g.label, g.parts.length, g.actionable]),
   [
     ['SPRAY PRIMER', 5, true],
-    ['SANDING', 7, true],
-    ['GLUE UP', 4, true],
+    ['SANDING', 8, true],
+    ['GLUE UP', 5, true],
     ['AIRBRUSH', 2, false], // 2 of 3 — not worth setting up yet
   ],
 );
 assert.equal(groups[3].parts.length < BATCH_THRESHOLD, true);
-// Belt buckle is sanding but curing, blade halves is assembling but curing:
-assert.equal(
-  groups.some((g) => g.parts.some((p) => p.name === 'Belt buckle' || p.name === 'Blade halves')),
-  false,
-);
 // Recommended = the setup that clears the most builds, not the biggest pile.
 assert.equal(recommendedGroup(groups)?.label, 'SPRAY PRIMER');
 assert.equal(recommendedGroup(groups)?.buildCount, 3);
-assert.equal(partsWaitingOnYou(groups), 18);
+assert.equal(partsWaitingOnYou(groups), 20);
 
 // —— suggested next step: prime → glue → sand, then print ——
 assert.equal(suggestedNextStep(beskar)?.text, 'Prime 2 parts — pauldron L, pauldron R');
@@ -148,7 +142,5 @@ assert.equal(timeAgo(ago(14 * 60_000), now), '14m ago');
 assert.equal(timeAgo(ago(2 * 3600_000), now), '2h ago');
 assert.equal(timeAgo(ago(26 * 3600_000), now), 'yesterday');
 assert.equal(timeAgo(ago(3 * 86_400_000), now), '3d ago');
-assert.equal(timeLeft(new Date(now + 100 * 60_000).toISOString(), now), '1h 40m');
-assert.equal(timeLeft(new Date(now + 22 * 60_000).toISOString(), now), '22m');
 
 console.log('derive: ok');
