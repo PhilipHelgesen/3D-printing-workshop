@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # `npm run check` runs TypeScript through Node's native type stripping,
+      # which is on by default from 23.6. Anything older needs a flag.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run check
+      # What Vercel runs. Failing here means the deploy would have failed too.
+      - run: npm run build

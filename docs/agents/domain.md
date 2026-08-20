@@ -4,11 +4,21 @@ How the engineering skills should consume this repo's domain documentation when 
 
 ## Before exploring, read these
 
-- **`CONTEXT.md`** at the repo root, or
-- **`CONTEXT-MAP.md`** at the repo root if it exists: it points at one `CONTEXT.md` per context. Read each one relevant to the topic.
-- **`docs/adr/`**: read ADRs that touch the area you're about to work in. In multi-context repos, also check `src/<context>/docs/adr/` for context-scoped decisions.
+- **`CLAUDE.md`** at the repo root. **This repo has no `CONTEXT.md`, deliberately.**
+  `CLAUDE.md` is the glossary — its **Domain rules** section defines the pipeline,
+  what an assembly is, what a build plan is, and which product decisions are not
+  to be "fixed". A second glossary file would drift from it, and `CLAUDE.md` has
+  the advantage of being loaded into context automatically every session.
+  Where a skill says `CONTEXT.md`, read `CLAUDE.md` and write back to it.
+- **`docs/adr/`**: read ADRs that touch the area you're about to work in.
 
-If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates them lazily when terms or decisions actually get resolved.
+Split the glossary out into `CONTEXT.md` only if `CLAUDE.md` grows big enough
+that carrying it on every session stops paying for itself. It hasn't.
+
+If a file named here doesn't exist, **proceed silently**. Don't flag its absence;
+don't suggest creating it upfront. The `/domain-modeling` skill (reached via
+`/grill-with-docs` and `/improve-codebase-architecture`) creates ADRs lazily when
+decisions actually get resolved.
 
 ## File structure
 
@@ -16,16 +26,17 @@ Single-context repo (this repo):
 
 ```
 /
-├── CONTEXT.md
+├── CLAUDE.md          the glossary (no CONTEXT.md — see above)
 ├── docs/adr/
-│   ├── 0001-event-sourced-orders.md
-│   └── 0002-postgres-for-write-model.md
+│   ├── 0001-state-as-one-json-blob.md
+│   ├── 0002-local-first-sync-last-write-wins.md
+│   └── 0003-supabase-policies-scoped-to-authenticated.md
 └── src/
 ```
 
 ## Use the glossary's vocabulary
 
-When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `CONTEXT.md`. Don't drift to synonyms the glossary explicitly avoids.
+When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `CLAUDE.md`. Don't drift to synonyms the glossary explicitly avoids.
 
 If the concept you need isn't in the glossary yet, that's a signal: either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/domain-modeling`).
 
@@ -33,4 +44,4 @@ If the concept you need isn't in the glossary yet, that's a signal: either you'r
 
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
-> _Contradicts ADR-0007 (event-sourced orders), but worth reopening because…_
+> _Contradicts ADR-0001 (state as one JSON blob), but worth reopening because…_

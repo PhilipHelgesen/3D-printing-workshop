@@ -214,6 +214,11 @@ handoff where they disagree.
 
 1. `npm run check` — passes.
 2. `npm run build` — passes (this is what Vercel runs).
+
+   CI runs both on every push to `main` and every PR — `.github/workflows/ci.yml`.
+   Don't rely on it to catch what you could have caught here; Vercel deploys off
+   the same push.
+
 3. Verify in the browser via the dev server; don't ask the user to check manually.
 4. Only commit and push when asked.
 
@@ -229,4 +234,5 @@ Default five roles, unchanged. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context (root `CONTEXT.md` + `docs/adr/`). See `docs/agents/domain.md`.
+Glossary is this file's **Domain rules** section — there is no `CONTEXT.md`.
+Decisions are ADRs in `docs/adr/`. See `docs/agents/domain.md`.
