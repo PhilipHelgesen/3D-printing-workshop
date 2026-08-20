@@ -70,7 +70,7 @@ store's action object, one assert in `derive.check.ts`, then the UI.
 
 - `types.ts` — `Part`, `Build`, `ToolboxEntry`, `State`, `Screen`.
 - `derive.ts` — everything computed, never stored: `progressPct`, `statusPills`,
-  `buildPlan`, `batchGroups`, `assemblies`, `timeAgo`, …
+  `buildPlan`, `batchGroups`, `partRows`, `assemblyBadge`, `timeAgo`, …
 - `workshop.ts` — `moveTo`, `advance`, `addPart`, `linkParts`, `saveEntry`, …
   Pure apart from `crypto.randomUUID()` / `new Date()`.
 - `store.ts` — `useStore()`: state, persistence, and the bound action object.
@@ -162,7 +162,12 @@ These are product decisions, not accidents. Don't "fix" them.
 - **Assemblies**: parts sharing a `linkGroupId` should stay on the same step
   (e.g. gauntlet LED + finger + hand). Any size, not just pairs. Linking a part
   that already belongs to a group merges the two groups. A group of one is
-  meaningless and gets pruned automatically — see `pruneLoneGroups`.
+  meaningless and gets pruned automatically — see `pruneLoneGroups`. The screens
+  never read `linkGroupId`: `partRows` hands the parts list its rows already
+  bracketed (a row is one part or one assembly, so paging can't split a group)
+  and `assemblyBadge` hands a row its badge. Rows are built from the *visible*
+  parts; a part's siblings are looked up across the *whole build*, so a badge
+  survives its siblings being filtered out of view.
 - Everything derived (progress, counts, next step) is **computed, never stored**.
 
 ---

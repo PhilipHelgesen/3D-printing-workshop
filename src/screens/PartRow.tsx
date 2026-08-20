@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { Part, PartStatus } from '../types.ts';
-import { STATUS_LABEL, STATUS_TOKENS, nextStatus, otherSteps, timeAgo } from '../derive.ts';
+import { STATUS_TOKENS, assemblyBadge, nextStatus, otherSteps, timeAgo } from '../derive.ts';
 import { StatusPill } from '../ui/StatusPill.tsx';
 import s from './build.module.css';
 
@@ -13,14 +13,6 @@ const LinkIcon = () => (
     <path d="M14 10a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1" />
   </svg>
 );
-
-function linkTitle(part: Part, links: Part[]) {
-  const names = links.map((l) => l.name).join(', ');
-  const behind = links.filter((l) => l.status !== part.status);
-  if (!behind.length) return `Linked to ${names} — same step`;
-  const detail = behind.map((l) => `${l.name} (${STATUS_LABEL[l.status]})`).join(', ');
-  return `Linked to ${names} — catch up: ${detail}`;
-}
 
 export interface PartRowActions {
   onToggleSelect: (id: string) => void;
@@ -49,7 +41,7 @@ export function PartRow({
   actions: PartRowActions;
 }) {
   const isDone = part.status === 'done';
-  const outOfStep = links.some((l) => l.status !== part.status);
+  const badge = assemblyBadge(part, links);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -85,10 +77,10 @@ export function PartRow({
       <div className={s.partInfo}>
         <span className={s.nameLine}>
           <span className={s.partName}>{part.name}</span>
-          {links.length > 0 && (
+          {badge && (
             <span
-              className={`${s.linkBadge} ${outOfStep ? s.linkBadgeOff : ''}`}
-              title={linkTitle(part, links)}
+              className={`${s.linkBadge} ${badge.inStep ? '' : s.linkBadgeOff}`}
+              title={badge.title}
             >
               <LinkIcon />
             </span>

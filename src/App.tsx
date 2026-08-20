@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import type { Part, Screen, ToolboxEntry } from './types.ts';
+import { assemblyMembers, linkCandidates } from './derive.ts';
 import { useStore } from './store.ts';
 import { supabase } from './supabase.ts';
 import { SignIn } from './ui/SignIn.tsx';
@@ -58,9 +59,7 @@ function Workshop() {
 
   const openBuild = builds.find((b) => b.id === openBuildId);
   const linkingPart = openBuild?.parts.find((p) => p.id === linkingPartId);
-  const assemblyMembers = linkingPart?.linkGroupId
-    ? openBuild!.parts.filter((p) => p.id !== linkingPart.id && p.linkGroupId === linkingPart.linkGroupId)
-    : [];
+  const members = linkingPart ? assemblyMembers(linkingPart, openBuild!.parts) : [];
 
   const ask = (question: string, current: string, run: (value: string) => void) => {
     const value = window.prompt(question, current);
@@ -144,13 +143,9 @@ function Workshop() {
       {linkingPart && openBuild && (
         <LinkPartModal
           part={linkingPart}
-          members={assemblyMembers}
-          candidates={openBuild.parts.filter(
-            (p) => p.id !== linkingPart.id && !assemblyMembers.some((m) => m.id === p.id),
-          )}
-          onAdd={(newIds) =>
-            store.linkParts([linkingPart.id, ...assemblyMembers.map((m) => m.id), ...newIds])
-          }
+          members={members}
+          candidates={linkCandidates(linkingPart, openBuild.parts)}
+          onAdd={(newIds) => store.linkParts([linkingPart.id, ...members.map((m) => m.id), ...newIds])}
           onRemoveMember={store.removeFromGroup}
           onClose={() => setLinkingPartId(null)}
         />

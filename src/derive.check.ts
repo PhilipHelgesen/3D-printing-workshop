@@ -2,12 +2,16 @@
 import assert from 'node:assert/strict';
 import {
   BATCH_THRESHOLD,
+  STATUS_LABEL,
   assemblies,
+  assemblyBadge,
+  assemblyMembers,
   batchGroups,
   buildPlan,
-  groupLinked,
+  linkCandidates,
   nextStatus,
   otherSteps,
+  partRows,
   partsDone,
   partsWaitingOnYou,
   progressPct,
@@ -17,6 +21,7 @@ import {
   statusPills,
   timeAgo,
 } from './derive.ts';
+import type { Part } from './types.ts';
 import { seedState } from './seed.ts';
 import * as workshop from './workshop.ts';
 
@@ -135,11 +140,76 @@ assert.equal(groupOf(broken, pauldronR.id), undefined);
 // Same when the other half is deleted outright.
 assert.equal(groupOf(workshop.deletePart(pair, pauldronR.id), pauldronL.id), undefined);
 
-// —— list ordering: assembly members stay adjacent whatever the sort ——
-const ordered = groupLinked(sortByProgress(partsOf(trio)));
-const linkedAt = ordered.map((p, i) => (p.linkGroupId ? i : -1)).filter((i) => i >= 0);
-assert.deepEqual(linkedAt, [linkedAt[0], linkedAt[0] + 1, linkedAt[0] + 2]);
-assert.equal(ordered.length, partsOf(trio).length);
+// —— the parts list: an assembly is one row, so nothing can split it ——
+const isRun = (row: Part | Part[]): row is Part[] => Array.isArray(row);
+
+// No assemblies at all: one row per part, same order.
+assert.deepEqual(partRows(beskar.parts), beskar.parts);
+
+// An assembly is a single row holding all of its members.
+const trioRows = partRows(partsOf(trio));
+const trioRuns = trioRows.filter(isRun);
+assert.equal(trioRuns.length, 1);
+assert.equal(trioRuns[0].length, 3);
+// Every part is placed exactly once.
+assert.deepEqual(
+  trioRows.flat().map((p) => p.id),
+  partsOf(trio).map((p) => p.id),
+);
+
+// Two assemblies produce two runs; neither absorbs the other.
+const twoRuns = partRows(partsOf(otherPair)).filter(isRun);
+assert.deepEqual(
+  twoRuns.map((r) => r.length),
+  [3, 2],
+);
+
+// Sorting can't scatter a group — the members are already inside one row.
+assert.equal(partRows(sortByProgress(partsOf(trio))).filter(isRun)[0].length, 3);
+
+// Filtering can leave one member visible; one part is a plain row, not a bracket over itself.
+const loneMember = partsOf(trio).filter((p) => p.id !== pauldronR.id && p.id !== vambraceL.id);
+assert.equal(loneMember.some((p) => p.linkGroupId), true);
+assert.equal(partRows(loneMember).some(isRun), false);
+
+// Paging cuts between rows: two rows here carry four parts rather than splitting the run.
+assert.equal(partRows(partsOf(trio)).slice(0, 2).flat().length, 4);
+
+// —— the link badge ——
+const drifted = workshop.moveTo(trio, [pauldronR.id], 'queued');
+const dParts = partsOf(drifted);
+const badgeOf = (p: Part, all: Part[]) => assemblyBadge(p, siblings(p, assemblies(all)));
+
+// Not in an assembly, no badge.
+assert.equal(badgeOf(dParts[5], dParts), null);
+
+// A sibling that has fallen behind is named, with the step to catch up to.
+const behind = badgeOf(dParts[0], dParts);
+assert.equal(behind?.inStep, false);
+assert.equal(behind?.title.includes(`${pauldronR.name} (${STATUS_LABEL.queued})`), true);
+
+// Members on the same step: named, no catch-up.
+const aligned = partsOf(workshop.moveTo(trio, [pauldronL.id, pauldronR.id, vambraceL.id], 'sanding'));
+assert.equal(badgeOf(aligned[0], aligned)?.inStep, true);
+assert.equal(badgeOf(aligned[0], aligned)?.title.includes('same step'), true);
+
+// The badge is looked up across the whole build, so filtering the siblings away keeps it.
+assert.ok(badgeOf(dParts[0], dParts));
+
+// —— the link modal's inputs ——
+assert.deepEqual(
+  assemblyMembers(dParts[0], dParts)
+    .map((p) => p.id)
+    .sort(),
+  [pauldronR.id, vambraceL.id].sort(),
+);
+const candidates = linkCandidates(dParts[0], dParts);
+// Never the part itself, never a part already in the assembly.
+assert.equal(
+  candidates.some((p) => p.id === dParts[0].id || p.linkGroupId === dParts[0].linkGroupId),
+  false,
+);
+assert.equal(candidates.length, dParts.length - 3);
 
 // —— builds ——
 

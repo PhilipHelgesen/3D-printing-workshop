@@ -242,18 +242,54 @@ export const siblings = (part: Part, byGroup: Map<string, Part[]>): Part[] =>
 export const sortByProgress = (parts: Part[]): Part[] =>
   [...parts].sort((a, b) => PIPELINE.indexOf(a.status) - PIPELINE.indexOf(b.status));
 
-/** Reorders a list so each assembly's members sit together, for the UI to bracket them. */
-export function groupLinked(parts: Part[]): Part[] {
+/**
+ * The rows a parts list should render: either a single part, or the run of parts
+ * that make up one assembly. Members are pulled together here, so the list can't
+ * scatter them by sorting and can't split them by paging — a page is a slice of
+ * rows, and an assembly is one row.
+ *
+ * Runs are built from the parts handed in, so a member filtered out of view
+ * simply isn't in the run; a group with one member left standing is a plain row,
+ * since a bracket over a single part means nothing.
+ */
+export function partRows(parts: Part[]): (Part | Part[])[] {
   const byGroup = assemblies(parts);
   const seen = new Set<string>();
-  const out: Part[] = [];
+  const rows: (Part | Part[])[] = [];
   for (const p of parts) {
     if (seen.has(p.id)) continue;
-    for (const member of p.linkGroupId ? byGroup.get(p.linkGroupId)! : [p]) {
-      if (seen.has(member.id)) continue;
-      out.push(member);
-      seen.add(member.id);
-    }
+    const members = p.linkGroupId ? byGroup.get(p.linkGroupId)! : [p];
+    for (const m of members) seen.add(m.id);
+    rows.push(members.length > 1 ? members : members[0]);
   }
-  return out;
+  return rows;
+}
+
+export interface AssemblyBadge {
+  /** Who else is in the assembly, and which of them have fallen behind. */
+  title: string;
+  inStep: boolean;
+}
+
+/**
+ * The link badge on a part, or `null` when it belongs to no assembly. Members
+ * *should* sit on the same step; the badge reports drift rather than preventing it.
+ */
+export function assemblyBadge(part: Part, links: Part[]): AssemblyBadge | null {
+  if (!links.length) return null;
+  const names = links.map((l) => l.name).join(', ');
+  const behind = links.filter((l) => l.status !== part.status);
+  if (!behind.length) return { title: `Linked to ${names} — same step`, inStep: true };
+  const detail = behind.map((l) => `${l.name} (${STATUS_LABEL[l.status]})`).join(', ');
+  return { title: `Linked to ${names} — catch up: ${detail}`, inStep: false };
+}
+
+/** The rest of a part's assembly, looked up in a flat list rather than a prepared index. */
+export const assemblyMembers = (part: Part, parts: Part[]): Part[] =>
+  siblings(part, assemblies(parts));
+
+/** Parts that could still join this part's assembly — never itself, never a current member. */
+export function linkCandidates(part: Part, parts: Part[]): Part[] {
+  const members = new Set(assemblyMembers(part, parts).map((p) => p.id));
+  return parts.filter((p) => p.id !== part.id && !members.has(p.id));
 }

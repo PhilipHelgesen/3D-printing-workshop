@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import type { Build, Part, PartStatus, Screen } from '../types.ts';
 import {
   STAGES,
@@ -9,7 +9,7 @@ import {
   buildUpdatedAt,
   countByStatus,
   daysUntil,
-  groupLinked,
+  partRows,
   partsDone,
   shortDate,
   siblings,
@@ -140,15 +140,18 @@ export function BuildDetail({
 
   const byGroup = useMemo(() => assemblies(build.parts), [build.parts]);
 
-  const visible = useMemo(() => {
+  // The screen owns filtering and sorting; derive turns what's left into rows.
+  const rows = useMemo(() => {
     const kept = build.parts.filter((p) =>
       filter === 'all' ? true : filter === 'done' ? p.status === 'done' : p.status !== 'done',
     );
-    // Assemblies are pulled together last, so a linked pair stays adjacent whatever the sort.
-    return groupLinked(sortMode === 'progress' ? sortByProgress(kept) : kept);
+    return partRows(sortMode === 'progress' ? sortByProgress(kept) : kept);
   }, [build.parts, filter, sortMode]);
 
-  const shown = showAll ? visible : visible.slice(0, PAGE);
+  // PAGE counts rows, not parts, so a page never cuts an assembly in half — which
+  // means a page can show more than PAGE parts when an assembly sits on the edge.
+  const shown = showAll ? rows : rows.slice(0, PAGE);
+  const hidden = rows.flat().length - shown.flat().length;
 
   const picked = build.parts.filter((p) => selected.includes(p.id));
   const sharedStatus =
@@ -174,24 +177,13 @@ export function BuildDetail({
     />
   );
 
-  // Consecutive members of one assembly get wrapped so a single bracket spans them.
-  const rows: ReactNode[] = [];
-  for (let i = 0; i < shown.length; i++) {
-    const groupId = shown[i].linkGroupId;
-    if (!groupId || shown[i + 1]?.linkGroupId !== groupId) {
-      rows.push(renderRow(shown[i]));
-      continue;
-    }
-    const run: Part[] = [];
-    while (i < shown.length && shown[i].linkGroupId === groupId) run.push(shown[i++]);
-    i--;
-    rows.push(
-      <div key={`group-${run[0].id}`} className={s.linkGroup}>
-        <div className={s.linkBracket} />
-        {run.map(renderRow)}
-      </div>,
-    );
-  }
+  // An assembly arrives as one row, so a single bracket spans exactly its members.
+  const renderRun = (run: Part[]) => (
+    <div key={`group-${run[0].id}`} className={s.linkGroup}>
+      <div className={s.linkBracket} />
+      {run.map(renderRow)}
+    </div>
+  );
 
   return (
     <div className={ui.page}>
@@ -305,10 +297,10 @@ export function BuildDetail({
         )}
 
         <div className={s.rows}>
-          {rows}
-          {!showAll && visible.length > PAGE && (
+          {shown.map((row) => (Array.isArray(row) ? renderRun(row) : renderRow(row)))}
+          {hidden > 0 && (
             <button className={s.showMore} onClick={() => setShowAll(true)}>
-              Show {visible.length - PAGE} more parts
+              Show {hidden} more parts
             </button>
           )}
         </div>
