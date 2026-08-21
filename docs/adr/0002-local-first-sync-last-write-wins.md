@@ -12,7 +12,10 @@ The workshop is used standing at a bench, on a phone or a laptop, sometimes on
 bad wifi. Waiting on a network round-trip before the parts list renders would be
 the wrong trade for a tool you glance at between operations.
 
-There is one maker, who in practice uses one device at a time.
+There is one maker, and the cloud copy exists for **device handoff, not
+collaboration**: the workshop is used at the bench, or on a phone planning for
+when they get home. Two devices, sequentially, never at once. Nobody is ever
+editing the same workshop concurrently with anybody — including with themselves.
 
 ## Decision
 

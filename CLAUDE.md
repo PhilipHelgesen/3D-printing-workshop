@@ -30,13 +30,13 @@ them. Don't add any without asking.
 
 ```bash
 npm run dev      # Vite dev server on :5173
-npm run check    # runs src/derive.check.ts — do this after touching derive.ts or workshop.ts
+npm run check    # runs the check files — after touching derive.ts, workshop.ts or persist.ts
 npm run build    # tsc -b && vite build — must pass before pushing
 ```
 
 `npm run check` executes TypeScript directly via Node's native type-stripping
-(Node 25 here; needs 22.6+). That's why the check file uses `.ts` import
-specifiers — so do all other imports in `src/`.
+(Node 25 here; needs 22.6+; CI pins 24). That's why the check files use `.ts`
+import specifiers — so do all other imports in `src/`.
 
 ---
 
@@ -73,10 +73,14 @@ store's action object, one assert in `derive.check.ts`, then the UI.
   `buildPlan`, `batchGroups`, `partRows`, `assemblyBadge`, `timeAgo`, …
 - `workshop.ts` — `moveTo`, `advance`, `addPart`, `linkParts`, `saveEntry`, …
   Pure apart from `crypto.randomUUID()` / `new Date()`.
+- `persist.ts` — the workshop copy's decisions, pure: `normalizeState`,
+  `parseStored`, `shouldSkipPush`. Imports no React and no Supabase, so the check
+  script can reach it (ADR-0004).
 - `store.ts` — `useStore()`: state, persistence, and the bound action object.
 - `seed.ts` — the mock workshop used on first load, plus the built-in icon swatches.
 - `icons.ts` — downscales and uploads toolbox icons to Supabase Storage.
-- `derive.check.ts` — the whole test suite. Plain `node:assert`.
+- `derive.check.ts` / `persist.check.ts` — the whole test suite. Plain
+  `node:assert`; `npm run check` runs both.
 
 ---
 
@@ -159,6 +163,19 @@ These are product decisions, not accidents. Don't "fix" them.
   operation, whether it batches with the other builds, and the parts it clears.
   `buildPlan(build, builds)` composes the whole card; the screens never assemble
   that wording or count themselves.
+- **The workshop copy** is the rule governing how the local copy and the cloud
+  copy of the workshop agree: pull once, cloud wins if it has anything, later
+  changes go to localStorage at once and to the cloud on a debounce, never
+  echoing back what was just pulled. It also covers **migrating a stored blob
+  into state we trust** — a copy written by an older version is normalised on
+  read, since there is no `ALTER TABLE` for a JSON blob (see ADR-0001). Last
+  write wins (ADR-0002). Implemented in `store.ts`; described under *Data and
+  persistence* above.
+- **The cloud copy exists for device handoff, not collaboration.** One person
+  uses this, one device at a time — at the bench, or on their phone planning for
+  when they get home. Two devices, never at once. That's why last-write-wins is
+  safe and why no conflict resolution is needed; it is not an unexamined
+  shortcut. Never design for concurrent editors.
 - **Assemblies**: parts sharing a `linkGroupId` should stay on the same step
   (e.g. gauntlet LED + finger + hand). Any size, not just pairs. Linking a part
   that already belongs to a group merges the two groups. A group of one is

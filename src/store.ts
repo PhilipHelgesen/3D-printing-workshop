@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PartStatus, State, ToolboxEntry } from './types.ts';
+import { normalizeState, parseStored, shouldSkipPush } from './persist.ts';
 import { seedState } from './seed.ts';
 import { ROW_ID, supabase } from './supabase.ts';
 import * as workshop from './workshop.ts';
@@ -7,30 +8,13 @@ import * as workshop from './workshop.ts';
 const KEY = 'nozzle.v1';
 const PUSH_DELAY_MS = 500;
 
-const normalizePartStatus = (status: string): PartStatus =>
-  status === 'smoothing' ? 'sanding' : (status as PartStatus);
-
-function normalizeState(state: State): State {
-  return {
-    ...state,
-    builds: state.builds.map((build) => ({
-      ...build,
-      parts: build.parts.map((part) => ({
-        ...part,
-        status: normalizePartStatus(part.status),
-      })),
-    })),
-  };
-}
-
 function loadLocal(): State {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) return normalizeState(JSON.parse(raw) as State);
+    return parseStored(localStorage.getItem(KEY));
   } catch {
-    // corrupt or unreadable — fall back to a fresh workshop
+    // reading storage can throw outright — Safari with "Block All Cookies" on
+    return seedState();
   }
-  return seedState();
 }
 
 /**
@@ -60,8 +44,16 @@ export function useStore() {
           console.warn('Nozzle: could not reach the cloud — working from this device only.', error.message);
         }
         if (data?.state) {
-          cloudJson.current = JSON.stringify(data.state);
-          setState(normalizeState(data.state as State));
+          try {
+            // Normalise before claiming the cloud copy is known: a blob this
+            // version can't read must not be recorded as the copy we hold.
+            const next = normalizeState(data.state as State);
+            cloudJson.current = JSON.stringify(data.state);
+            setState(next);
+          } catch {
+            console.warn("Nozzle: the cloud copy couldn't be read — working from this device.");
+            cloudJson.current = ''; // treat it as empty; the next change overwrites it
+          }
         } else {
           cloudJson.current = ''; // nothing up there yet (or unreachable) — next change seeds it
         }
@@ -80,7 +72,7 @@ export function useStore() {
       console.warn('Nozzle: could not save locally — storage is full.');
     }
 
-    if (cloudJson.current === undefined || cloudJson.current === json) return;
+    if (shouldSkipPush(cloudJson.current, json)) return;
     const timer = setTimeout(() => {
       supabase
         .from('workshop')
