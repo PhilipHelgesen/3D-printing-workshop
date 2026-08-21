@@ -172,7 +172,7 @@ const loneMember = partsOf(trio).filter((p) => p.id !== pauldronR.id && p.id !==
 assert.equal(loneMember.some((p) => p.linkGroupId), true);
 assert.equal(partRows(loneMember).some(isRun), false);
 
-// Paging cuts between rows: two rows here carry four parts rather than splitting the run.
+// A row is a whole assembly, never a slice of one: two rows here carry four parts.
 assert.equal(partRows(partsOf(trio)).slice(0, 2).flat().length, 4);
 
 // —— the link badge ——

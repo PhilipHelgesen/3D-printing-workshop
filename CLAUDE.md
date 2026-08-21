@@ -181,7 +181,7 @@ These are product decisions, not accidents. Don't "fix" them.
   that already belongs to a group merges the two groups. A group of one is
   meaningless and gets pruned automatically — see `pruneLoneGroups`. The screens
   never read `linkGroupId`: `partRows` hands the parts list its rows already
-  bracketed (a row is one part or one assembly, so paging can't split a group)
+  bracketed (a row is one part or one assembly, so sorting can't scatter a group)
   and `assemblyBadge` hands a row its badge. Rows are built from the *visible*
   parts; a part's siblings are looked up across the *whole build*, so a badge
   survives its siblings being filtered out of view.

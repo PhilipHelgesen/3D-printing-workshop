@@ -21,8 +21,6 @@ import { PartRow, type PartRowActions } from './PartRow.tsx';
 import ui from '../ui/ui.module.css';
 import s from './build.module.css';
 
-const PAGE = 9;
-
 const TONE_BG = {
   manual: 'var(--lemon-tint)',
   glue: 'var(--basil-tint)',
@@ -133,7 +131,6 @@ export function BuildDetail({
   const [filter, setFilter] = useState<'all' | 'needs' | 'done'>('all');
   const [sortMode, setSortMode] = useState<'recent' | 'progress'>('recent');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
 
   const done = partsDone(build);
   const plan = buildPlan(build, builds);
@@ -147,11 +144,6 @@ export function BuildDetail({
     );
     return partRows(sortMode === 'progress' ? sortByProgress(kept) : kept);
   }, [build.parts, filter, sortMode]);
-
-  // PAGE counts rows, not parts, so a page never cuts an assembly in half — which
-  // means a page can show more than PAGE parts when an assembly sits on the edge.
-  const shown = showAll ? rows : rows.slice(0, PAGE);
-  const hidden = rows.flat().length - shown.flat().length;
 
   const picked = build.parts.filter((p) => selected.includes(p.id));
   const sharedStatus =
@@ -297,12 +289,7 @@ export function BuildDetail({
         )}
 
         <div className={s.rows}>
-          {shown.map((row) => (Array.isArray(row) ? renderRun(row) : renderRow(row)))}
-          {hidden > 0 && (
-            <button className={s.showMore} onClick={() => setShowAll(true)}>
-              Show {hidden} more parts
-            </button>
-          )}
+          {rows.map((row) => (Array.isArray(row) ? renderRun(row) : renderRow(row)))}
         </div>
       </div>
 

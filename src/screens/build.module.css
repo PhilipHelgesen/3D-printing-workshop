@@ -442,18 +442,6 @@
   color: var(--terra);
 }
 
-.showMore {
-  align-self: center;
-  margin-top: 2px;
-  font: 700 11.5px var(--font-sans);
-  color: var(--sea-dark);
-  background: var(--surface);
-  border: 1px solid var(--sea-dark);
-  border-radius: var(--radius-chip);
-  padding: 8px 18px;
-  cursor: pointer;
-}
-
 /* right rail */
 
 .nextCard {

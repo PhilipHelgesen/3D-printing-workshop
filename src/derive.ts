@@ -245,8 +245,7 @@ export const sortByProgress = (parts: Part[]): Part[] =>
 /**
  * The rows a parts list should render: either a single part, or the run of parts
  * that make up one assembly. Members are pulled together here, so the list can't
- * scatter them by sorting and can't split them by paging — a page is a slice of
- * rows, and an assembly is one row.
+ * scatter them by sorting — an assembly arrives as one row, whole.
  *
  * Runs are built from the parts handed in, so a member filtered out of view
  * simply isn't in the run; a group with one member left standing is a plain row,
