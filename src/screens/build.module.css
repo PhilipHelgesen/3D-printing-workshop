@@ -384,6 +384,12 @@
   padding: 8px;
 }
 
+/* No room below the button — the menu opens upward rather than off the window. */
+.menuUp {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
 .menuKicker {
   font: 700 9px var(--font-mono);
   letter-spacing: 0.14em;

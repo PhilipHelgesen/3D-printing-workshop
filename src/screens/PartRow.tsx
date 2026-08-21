@@ -1,8 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { Part, PartStatus } from '../types.ts';
 import { STATUS_TOKENS, assemblyBadge, nextStatus, otherSteps, timeAgo } from '../derive.ts';
 import { StatusPill } from '../ui/StatusPill.tsx';
 import s from './build.module.css';
+
+/**
+ * How tall the Advance menu stands. Measured, not computed: the menu isn't in the
+ * DOM until it opens, and the row that opens it has to decide which way it goes.
+ * ponytail: a constant holds while the menu's items are fixed — measure on open if
+ * it ever grows a variable section.
+ */
+const MENU_HEIGHT = 340;
 
 const stepLabel = (status: PartStatus) =>
   status === 'queued' ? 'Back to queue' : status.charAt(0).toUpperCase() + status.slice(1);
@@ -42,6 +50,7 @@ export function PartRow({
 }) {
   const isDone = part.status === 'done';
   const badge = assemblyBadge(part, links);
+  const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -97,6 +106,11 @@ export function PartRow({
         aria-expanded={menuOpen}
         onClick={(e) => {
           e.stopPropagation();
+          // Decided at the click, while the button's place on screen is known.
+          if (!menuOpen) {
+            const { bottom } = e.currentTarget.getBoundingClientRect();
+            setFlipped(bottom + MENU_HEIGHT > window.innerHeight);
+          }
           onOpenMenu(menuOpen ? null : part.id);
         }}
       >
@@ -104,7 +118,10 @@ export function PartRow({
       </button>
 
       {menuOpen && (
-        <div className={s.menu} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={`${s.menu} ${flipped ? s.menuUp : ''}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className={s.menuKicker}>MOVE TO STEP</div>
           {otherSteps(part.status).map((status) => {
             const isNext = status === nextStatus(part.status);
