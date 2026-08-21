@@ -186,9 +186,6 @@
   margin-left: 4px;
 }
 
-
-
-
 .rows {
   display: flex;
   flex-direction: column;
@@ -225,7 +222,6 @@
   box-shadow: var(--shadow-row);
 }
 
-
 .rowDone {
   border-left: 4px solid var(--basil);
 }
@@ -243,7 +239,6 @@
   align-items: center;
   justify-content: center;
 }
-
 
 .checkDone {
   background: var(--basil-tint);

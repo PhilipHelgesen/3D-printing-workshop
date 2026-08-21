@@ -5,12 +5,13 @@ import { StatusPill } from '../ui/StatusPill.tsx';
 import s from './build.module.css';
 
 /**
- * How tall the Advance menu stands. Measured, not computed: the menu isn't in the
- * DOM until it opens, and the row that opens it has to decide which way it goes.
- * ponytail: a constant holds while the menu's items are fixed — measure on open if
- * it ever grows a variable section.
+ * How tall the Advance menu stands: ten items of 33px, a kicker, a rule and its
+ * padding. A constant because the menu isn't in the DOM until it opens, and the
+ * row has to decide which way it goes before that.
+ * ponytail: holds while the menu's items are fixed — measure on open if it ever
+ * grows a variable section.
  */
-const MENU_HEIGHT = 340;
+const MENU_HEIGHT = 384;
 
 const stepLabel = (status: PartStatus) =>
   status === 'queued' ? 'Back to queue' : status.charAt(0).toUpperCase() + status.slice(1);
@@ -96,10 +97,11 @@ export function PartRow({
         aria-expanded={menuOpen}
         onClick={(e) => {
           e.stopPropagation();
-          // Decided at the click, while the button's place on screen is known.
+          // Decided at the click, while the row's place on screen is known. The
+          // menu hangs off the row, not off this button, so the row is what's measured.
           if (!menuOpen) {
-            const { bottom } = e.currentTarget.getBoundingClientRect();
-            setFlipped(bottom + MENU_HEIGHT > window.innerHeight);
+            const row = e.currentTarget.parentElement!.getBoundingClientRect();
+            setFlipped(row.bottom + MENU_HEIGHT > window.innerHeight);
           }
           onOpenMenu(menuOpen ? null : part.id);
         }}
