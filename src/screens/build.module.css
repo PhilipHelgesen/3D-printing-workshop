@@ -186,32 +186,8 @@
   margin-left: 4px;
 }
 
-.selectionBar {
-  background: var(--sea-tint);
-  border-radius: var(--radius-card);
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex: none;
-}
 
-.selectionText {
-  font: 700 12.5px var(--font-sans);
-  color: var(--sea-dark);
-}
 
-.selectionBtn {
-  font: 700 12px var(--font-sans);
-  color: #fff;
-  background: var(--sea);
-  border: none;
-  border-radius: var(--radius-chip);
-  padding: 9px 16px;
-  cursor: pointer;
-  white-space: nowrap;
-}
 
 .rows {
   display: flex;
@@ -249,9 +225,6 @@
   box-shadow: var(--shadow-row);
 }
 
-.rowSelected {
-  background: var(--sea-tint);
-}
 
 .rowDone {
   border-left: 4px solid var(--basil);
@@ -271,10 +244,6 @@
   justify-content: center;
 }
 
-.checkOn {
-  background: var(--sea);
-  border-color: var(--sea);
-}
 
 .checkDone {
   background: var(--basil-tint);

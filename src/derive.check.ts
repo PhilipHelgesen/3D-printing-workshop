@@ -176,7 +176,7 @@ assert.equal(partRows(loneMember).some(isRun), false);
 assert.equal(partRows(partsOf(trio)).slice(0, 2).flat().length, 4);
 
 // —— the link badge ——
-const drifted = workshop.moveTo(trio, [pauldronR.id], 'queued');
+const drifted = workshop.moveTo(trio, pauldronR.id, 'queued');
 const dParts = partsOf(drifted);
 const badgeOf = (p: Part, all: Part[]) => assemblyBadge(p, siblings(p, assemblies(all)));
 
@@ -189,7 +189,12 @@ assert.equal(behind?.inStep, false);
 assert.equal(behind?.title.includes(`${pauldronR.name} (${STATUS_LABEL.queued})`), true);
 
 // Members on the same step: named, no catch-up.
-const aligned = partsOf(workshop.moveTo(trio, [pauldronL.id, pauldronR.id, vambraceL.id], 'sanding'));
+const aligned = partsOf(
+  [pauldronL.id, pauldronR.id, vambraceL.id].reduce(
+    (s, id) => workshop.moveTo(s, id, 'sanding'),
+    trio,
+  ),
+);
 assert.equal(badgeOf(aligned[0], aligned)?.inStep, true);
 assert.equal(badgeOf(aligned[0], aligned)?.title.includes('same step'), true);
 

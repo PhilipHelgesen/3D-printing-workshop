@@ -23,8 +23,7 @@ const LinkIcon = () => (
 );
 
 export interface PartRowActions {
-  onToggleSelect: (id: string) => void;
-  onMove: (ids: string[], status: PartStatus) => void;
+  onMove: (id: string, status: PartStatus) => void;
   onRename: (part: Part) => void;
   onNote: (part: Part) => void;
   onDelete: (part: Part) => void;
@@ -34,7 +33,6 @@ export interface PartRowActions {
 export function PartRow({
   part,
   links,
-  isSelected,
   menuOpen,
   onOpenMenu,
   actions,
@@ -42,7 +40,6 @@ export function PartRow({
   part: Part;
   /** The rest of this part's assembly, if any. */
   links: Part[];
-  isSelected: boolean;
   menuOpen: boolean;
   /** `null` closes; the parent keeps this so only one menu is ever open. */
   onOpenMenu: (id: string | null) => void;
@@ -72,16 +69,9 @@ export function PartRow({
   };
 
   return (
-    <div className={`${s.row} ${isSelected ? s.rowSelected : ''} ${isDone ? s.rowDone : ''}`}>
-      <button
-        className={`${s.check} ${isSelected ? s.checkOn : ''} ${isDone ? s.checkDone : ''}`}
-        disabled={isDone}
-        aria-label={`Select ${part.name}`}
-        aria-pressed={isSelected}
-        onClick={() => actions.onToggleSelect(part.id)}
-      >
-        {isDone && <span />}
-      </button>
+    <div className={`${s.row} ${isDone ? s.rowDone : ''}`}>
+      {/* A marker, not a control: the row's step is changed from the Advance menu. */}
+      <span className={`${s.check} ${isDone ? s.checkDone : ''}`}>{isDone && <span />}</span>
 
       <div className={s.partInfo}>
         <span className={s.nameLine}>
@@ -129,7 +119,7 @@ export function PartRow({
               <button
                 key={status}
                 className={`${s.menuItem} ${isNext ? s.menuNext : ''}`}
-                onClick={pick(() => actions.onMove([part.id], status))}
+                onClick={pick(() => actions.onMove(part.id, status))}
               >
                 <span className={s.menuDot} style={{ background: STATUS_TOKENS[status].solid }} />
                 {stepLabel(status)}

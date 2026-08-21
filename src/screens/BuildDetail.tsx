@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import type { Build, Part, PartStatus, Screen } from '../types.ts';
 import {
   STAGES,
-  STATIONS,
   STATUS_TOKENS,
   assemblies,
   buildPlan,
@@ -123,11 +122,10 @@ export function BuildDetail({
   onAddPart: () => void;
   onRenameBuild: (name: string) => void;
   onDeleteBuild: () => void;
-  onAdvance: (ids: string[]) => void;
+  onAdvance: (id: string) => void;
   onLinkPart: (id: string) => void;
-  rowActions: Omit<PartRowActions, 'onToggleSelect' | 'onLink'>;
+  rowActions: Omit<PartRowActions, 'onLink'>;
 }) {
-  const [selected, setSelected] = useState<string[]>([]);
   const [filter, setFilter] = useState<'all' | 'needs' | 'done'>('all');
   const [sortMode, setSortMode] = useState<'recent' | 'progress'>('recent');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -145,24 +143,13 @@ export function BuildDetail({
     return partRows(sortMode === 'progress' ? sortByProgress(kept) : kept);
   }, [build.parts, filter, sortMode]);
 
-  const picked = build.parts.filter((p) => selected.includes(p.id));
-  const sharedStatus =
-    picked.length > 0 && picked.every((p) => p.status === picked[0].status) ? picked[0].status : null;
-  const sharedStation = sharedStatus ? STATIONS.find((st) => st.status === sharedStatus) : undefined;
-
-  const actions: PartRowActions = {
-    ...rowActions,
-    onLink: onLinkPart,
-    onToggleSelect: (id) =>
-      setSelected((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id])),
-  };
+  const actions: PartRowActions = { ...rowActions, onLink: onLinkPart };
 
   const renderRow = (part: Part) => (
     <PartRow
       key={part.id}
       part={part}
       links={siblings(part, byGroup)}
-      isSelected={selected.includes(part.id)}
       menuOpen={openMenu === part.id}
       onOpenMenu={setOpenMenu}
       actions={actions}
@@ -268,26 +255,6 @@ export function BuildDetail({
           </div>
         </div>
 
-        {selected.length > 0 && (
-          <div className={s.selectionBar}>
-            <span className={s.selectionText}>
-              {selected.length} {selected.length === 1 ? 'part' : 'parts'} selected —{' '}
-              {sharedStation
-                ? `${selected.length === 1 ? '' : selected.length === 2 ? 'both ' : 'all '}waiting on ${sharedStation.noun}`
-                : 'mixed steps'}
-            </span>
-            <button
-              className={s.selectionBtn}
-              onClick={() => {
-                onAdvance(selected);
-                setSelected([]);
-              }}
-            >
-              {sharedStation ? `${sharedStation.verb} them together ▸` : 'Advance them ▸'}
-            </button>
-          </div>
-        )}
-
         <div className={s.rows}>
           {rows.map((row) => (Array.isArray(row) ? renderRun(row) : renderRow(row)))}
         </div>
@@ -302,7 +269,7 @@ export function BuildDetail({
             {plan.parts.length > 0 && (
               <div className={s.nextParts}>
                 {plan.parts.map((p) => (
-                  <button key={p.id} className={s.nextPart} onClick={() => onAdvance([p.id])}>
+                  <button key={p.id} className={s.nextPart} onClick={() => onAdvance(p.id)}>
                     {p.name}
                   </button>
                 ))}

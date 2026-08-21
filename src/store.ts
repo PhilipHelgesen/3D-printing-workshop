@@ -88,8 +88,8 @@ export function useStore() {
   // setState is stable, so every action is too — built once and reused.
   const actions = useMemo(
     () => ({
-      moveTo: (ids: string[], status: PartStatus) => setState((s) => workshop.moveTo(s, ids, status)),
-      advance: (ids: string[]) => setState((s) => workshop.advance(s, ids)),
+      moveTo: (id: string, status: PartStatus) => setState((s) => workshop.moveTo(s, id, status)),
+      advance: (id: string) => setState((s) => workshop.advance(s, id)),
       addPart: (buildId: string, name: string, note?: string) =>
         setState((s) => workshop.addPart(s, buildId, name, note)),
       renamePart: (id: string, name: string) => setState((s) => workshop.renamePart(s, id, name)),

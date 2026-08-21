@@ -152,6 +152,12 @@ These are product decisions, not accidents. Don't "fix" them.
   a failure state.
 - **Any part can move to any step.** The Advance menu lists every other step —
   rework jumps backwards, and a part in assembling can go straight to painting.
+- **Parts advance one at a time.** There is no multi-select: no row checkbox, no
+  selection bar, no "advance them together". Batching is *advice* — the dashboard
+  names the group worth one setup — and the parts are then ticked off one by one
+  through each row's Advance menu. The square at the head of a row is a done
+  marker, not a control. `moveTo` and `advance` take a single part id; don't
+  widen them back to a list.
 - **There is no curing or "hands off" concept.** No cure timer, no print ETA, no
   part is ever unavailable — every part at a station is workable right now. The
   old `curingUntil` field was deleted along with everything that read it: it had
