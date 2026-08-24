@@ -89,7 +89,6 @@ export function useStore() {
   const actions = useMemo(
     () => ({
       moveTo: (id: string, status: PartStatus) => setState((s) => workshop.moveTo(s, id, status)),
-      advance: (id: string) => setState((s) => workshop.advance(s, id)),
       addPart: (buildId: string, name: string, note?: string) =>
         setState((s) => workshop.addPart(s, buildId, name, note)),
       renamePart: (id: string, name: string) => setState((s) => workshop.renamePart(s, id, name)),
@@ -99,6 +98,10 @@ export function useStore() {
       removeFromGroup: (id: string) => setState((s) => workshop.removeFromGroup(s, id)),
       addBuild: (name: string) => setState((s) => workshop.addBuild(s, name)),
       renameBuild: (id: string, name: string) => setState((s) => workshop.renameBuild(s, id, name)),
+      setBuildImage: (id: string, image: string) =>
+        setState((s) => workshop.setBuildImage(s, id, image)),
+      setBuildNote: (id: string, note: string) =>
+        setState((s) => workshop.setBuildNote(s, id, note)),
       deleteBuild: (id: string) => setState((s) => workshop.deleteBuild(s, id)),
       toggleFavorite: (id: string) => setState((s) => workshop.toggleFavorite(s, id)),
       saveEntry: (draft: ToolboxEntry) => setState((s) => workshop.saveEntry(s, draft)),

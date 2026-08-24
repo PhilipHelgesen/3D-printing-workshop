@@ -10,20 +10,17 @@ const DAY = 24 * HOUR;
  */
 export function seedState(now = Date.now()): State {
   const ago = (ms: number) => new Date(now - ms).toISOString();
-  const inMs = (ms: number) => new Date(now + ms).toISOString();
 
   let seq = 0;
   const build = (
     id: string,
     name: string,
     startedAt: string,
-    deadline: string | undefined,
     parts: [string, PartStatus, number][],
   ): Build => ({
     id,
     name,
     startedAt,
-    deadline,
     parts: parts.map(
       ([partName, status, agoMs]): Part => ({
         id: `p${++seq}`,
@@ -40,7 +37,7 @@ export function seedState(now = Date.now()): State {
 
   return {
     builds: [
-      build('b1', 'Mandalorian Beskar Set', ago(68 * DAY), inMs(23 * DAY), [
+      build('b1', 'Mandalorian Beskar Set', ago(68 * DAY), [
         ['Pauldron L', 'priming', 2 * HOUR],
         ['Pauldron R', 'priming', 2 * HOUR],
         ['Vambrace, left', 'sanding', 26 * HOUR],
@@ -73,7 +70,7 @@ export function seedState(now = Date.now()): State {
           64 * DAY,
         ),
       ]),
-      build('b2', 'Hunter Helmet v3', ago(40 * DAY), undefined, [
+      build('b2', 'Hunter Helmet v3', ago(40 * DAY), [
         ['Chin vent', 'printing', 2 * HOUR],
         ['Mandible', 'painting', 5 * HOUR],
         ['Brow plate', 'painting', 6 * HOUR],
@@ -83,14 +80,14 @@ export function seedState(now = Date.now()): State {
         ['Rangefinder stalk', 'queued', 4 * DAY],
         ...done(['Dome shell', 'Visor frame', 'Ear cap L', 'Ear cap R'], 30 * DAY),
       ]),
-      build('b3', 'Energy Sword Prop', ago(55 * DAY), undefined, [
+      build('b3', 'Energy Sword Prop', ago(55 * DAY), [
         ['Blade halves', 'assembling', 3 * DAY],
         ...done(
           ['Hilt shell L', 'Hilt shell R', 'Emitter', 'Grip wrap', 'Blade core', 'Power cell', 'Guard'],
           20 * DAY,
         ),
       ]),
-      build('b4', 'Pip-Boy Cuff', ago(30 * DAY), undefined, [
+      build('b4', 'Pip-Boy Cuff', ago(30 * DAY), [
         ['Screen bezel', 'printing', 5 * DAY],
         ['Dial ring', 'sanding', 6 * DAY],
         ['Knob A', 'sanding', 6 * DAY],

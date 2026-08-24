@@ -1,7 +1,7 @@
 // Self-check for the workshop copy: how a stored blob becomes state we trust,
 // and when a change is owed to the cloud. Run by `npm run check`.
 import assert from 'node:assert/strict';
-import type { PartStatus } from './types.ts';
+import type { Build, PartStatus } from './types.ts';
 import { normalizeState, parseStored, shouldSkipPush } from './persist.ts';
 import { seedState } from './seed.ts';
 
@@ -24,6 +24,15 @@ assert.deepEqual(
   fresh.builds.map((b) => b.parts.length),
 );
 assert.equal(migrated.toolbox.length, fresh.toolbox.length);
+// `deadline` was deleted from Build (ADR-0006) — it had no writer, so it only
+// ever described mock data. A blob stored before that still carries it.
+const dated = clone(fresh);
+(dated.builds[0] as Build & { deadline?: string }).deadline = '2026-09-15T00:00:00.000Z';
+assert.equal((normalizeState(dated).builds[0] as Build & { deadline?: string }).deadline, undefined);
+// Stripping it leaves the rest of the build alone.
+assert.equal(normalizeState(dated).builds[0].name, fresh.builds[0].name);
+assert.equal(normalizeState(dated).builds[0].parts.length, fresh.builds[0].parts.length);
+
 // A copy with nothing to migrate comes back unchanged. Compared against a
 // round-tripped copy because JSON drops keys whose value is undefined.
 const stored = clone(fresh);

@@ -1,5 +1,4 @@
 import type { Build, Part, PartStatus, State, ToolboxEntry } from './types.ts';
-import { nextStatus } from './derive.ts';
 
 /**
  * Every way the workshop can change, as plain `(state, args) => state`.
@@ -38,10 +37,6 @@ function pruneLoneGroups(parts: Part[]): Part[] {
 
 export const moveTo = (state: State, id: string, status: PartStatus): State =>
   mapParts(state, only([id], (p) => ({ ...p, status, updatedAt: now() })));
-
-/** Finish the current operation on a part — it moves one step down the pipeline. */
-export const advance = (state: State, id: string): State =>
-  mapParts(state, only([id], (p) => ({ ...p, status: nextStatus(p.status), updatedAt: now() })));
 
 export const renamePart = (state: State, id: string, name: string): State =>
   mapParts(state, only([id], (p) => ({ ...p, name })));
@@ -98,6 +93,13 @@ export const addBuild = (state: State, name: string): State => ({
 
 export const renameBuild = (state: State, id: string, name: string): State =>
   mapBuilds(state, (b) => (b.id === id ? { ...b, name } : b));
+
+/** Both drop the key when cleared, so an empty build carries no empty strings. */
+export const setBuildImage = (state: State, id: string, image: string): State =>
+  mapBuilds(state, (b) => (b.id === id ? { ...b, image: image || undefined } : b));
+
+export const setBuildNote = (state: State, id: string, note: string): State =>
+  mapBuilds(state, (b) => (b.id === id ? { ...b, note: note || undefined } : b));
 
 /** Deleting a build takes its parts with it — there is nowhere else for them to live. */
 export const deleteBuild = (state: State, id: string): State => ({

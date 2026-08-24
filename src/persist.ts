@@ -1,7 +1,7 @@
 // The workshop copy: turning a stored blob into state we trust, and deciding
 // when a change is owed to the cloud. Kept out of `store.ts` — and free of React
 // and Supabase imports — so `npm run check` can reach it. See ADR-0004.
-import type { PartStatus, State } from './types.ts';
+import type { Build, PartStatus, State } from './types.ts';
 import { seedState } from './seed.ts';
 
 /** The `smoothing` stage was renamed `sanding`; copies stored before that still say it. */
@@ -16,13 +16,17 @@ const normalizePartStatus = (status: string): PartStatus =>
 export function normalizeState(state: State): State {
   return {
     ...state,
-    builds: state.builds.map((build) => ({
-      ...build,
-      parts: build.parts.map((part) => ({
-        ...part,
-        status: normalizePartStatus(part.status),
-      })),
-    })),
+    builds: state.builds.map(({ ...build }) => {
+      // `deadline` was deleted with the whole idea of a date on a build (ADR-0006).
+      delete (build as Build & { deadline?: string }).deadline;
+      return {
+        ...build,
+        parts: build.parts.map((part) => ({
+          ...part,
+          status: normalizePartStatus(part.status),
+        })),
+      };
+    }),
   };
 }
 

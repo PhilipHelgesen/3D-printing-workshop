@@ -7,13 +7,13 @@ import {
   assemblyBadge,
   assemblyMembers,
   batchGroups,
-  buildPlan,
   linkCandidates,
   nextStatus,
   otherSteps,
   partRows,
   partsDone,
   partsWaitingOnYou,
+  progressColor,
   progressPct,
   recommendedGroup,
   siblings,
@@ -65,29 +65,10 @@ assert.equal(recommendedGroup(groups)?.label, 'SPRAY PRIMER');
 assert.equal(recommendedGroup(groups)?.buildCount, 3);
 assert.equal(partsWaitingOnYou(groups), 20);
 
-// —— the build plan: prime → glue → sand, then print ——
-assert.equal(buildPlan(beskar, builds)?.title, 'Prime 2 parts');
-assert.equal(buildPlan(hunter, builds)?.title, 'Prime 2 parts');
-assert.equal(buildPlan(sword, builds)?.tone, 'glue');
-
-// The count in the subtitle is the same operation stacked up in the OTHER builds.
-assert.equal(buildPlan(beskar, builds)?.subtitle, '3 more parts elsewhere are ready for primer too.');
-// Alone, a build has nothing to batch with — no subtitle at all.
-assert.equal(buildPlan(beskar, [beskar])?.subtitle, null);
-// Every part the card offers belongs to this build; the elsewhere ones are only counted.
-assert.equal(
-  buildPlan(beskar, builds)?.parts.every((p) => p.buildId === beskar.id),
-  true,
-);
-
-// A print is named, not offered — there is nothing to tick off until it comes off the bed.
-const queuedOnly = { ...beskar, parts: beskar.parts.filter((p) => p.status === 'queued') };
-assert.equal(buildPlan(queuedOnly, builds)?.title, 'Print next: gauntlet, left');
-assert.deepEqual(buildPlan(queuedOnly, builds)?.parts, []);
-assert.equal(buildPlan(queuedOnly, builds)?.subtitle, null);
-
-// Nothing left to do at all.
-assert.equal(buildPlan({ ...beskar, parts: [] }, builds), null);
+// —— the donut: green only once a build reads as finishing ——
+// sword is 7 of 8 done (87.5%), beskar 18 of 26.
+assert.equal(progressColor(sword), 'var(--basil)');
+assert.equal(progressColor(beskar), 'var(--sea)');
 
 // —— pills: pipeline order, queued last, DONE only once a build is finishing ——
 assert.deepEqual(
@@ -219,6 +200,21 @@ assert.equal(candidates.length, dParts.length - 3);
 // —— builds ——
 
 // Deleting a build takes its parts with it and leaves the others alone.
+// —— a build's photo and note ——
+// Both are optional and replaceable; neither existed before ADR-0006.
+const shot = workshop.setBuildImage(state, beskar.id, 'https://example.test/beskar.webp');
+assert.equal(shot.builds[0].image, 'https://example.test/beskar.webp');
+assert.equal(shot.builds[1].image, undefined, 'only the named build is touched');
+// Clearing drops the key rather than storing an empty string.
+assert.equal(workshop.setBuildImage(shot, beskar.id, '').builds[0].image, undefined);
+
+const noted = workshop.setBuildNote(state, beskar.id, 'Chest plate needs a reprint');
+assert.equal(noted.builds[0].note, 'Chest plate needs a reprint');
+assert.equal(noted.builds[1].note, undefined);
+assert.equal(workshop.setBuildNote(noted, beskar.id, '').builds[0].note, undefined);
+// Neither disturbs the parts.
+assert.equal(noted.builds[0].parts.length, beskar.parts.length);
+
 const without = workshop.deleteBuild(state, hunter.id);
 assert.equal(without.builds.length, state.builds.length - 1);
 assert.equal(without.builds.some((b) => b.id === hunter.id), false);

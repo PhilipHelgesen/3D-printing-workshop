@@ -23,9 +23,13 @@ export interface Build {
   id: string;
   name: string;
   startedAt: string;
-  deadline?: string;
+  /** A picture of the thing being made — usually the model listing's render at first. */
+  image?: string;
+  note?: string;
   parts: Part[];
 }
+// NOTE: there is deliberately NO `deadline`. The old one had no writer and only
+// ever described mock data; scheduling has no place here. See ADR-0006.
 
 export interface ToolboxEntry {
   id: string;
