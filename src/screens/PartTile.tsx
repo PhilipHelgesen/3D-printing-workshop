@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Part } from '../types.ts';
 import { STATUS_LABEL, STATUS_TOKENS, assemblyBadge } from '../derive.ts';
-import { AdvanceMenu, LinkIcon, menuPlace, type MenuPlace, type PartActions } from './AdvanceMenu.tsx';
+import { AdvanceMenu, LinkIcon, menuPlace, type PartActions } from './AdvanceMenu.tsx';
 import s from './build.module.css';
 
 /**
@@ -27,7 +27,7 @@ export function PartTile({
 }) {
   const token = STATUS_TOKENS[part.status];
   const badge = assemblyBadge(part, links);
-  const [place, setPlace] = useState<MenuPlace>({ left: true, up: false });
+  const [place, setPlace] = useState('');
 
   return (
     <div className={s.tileWrap}>
@@ -37,7 +37,7 @@ export function PartTile({
         aria-expanded={menuOpen}
         onClick={(e) => {
           e.stopPropagation();
-          if (!menuOpen) setPlace(menuPlace(e.currentTarget, 'tile'));
+          if (!menuOpen) setPlace(menuPlace(e.currentTarget));
           onOpenMenu(menuOpen ? null : part.id);
         }}
       >
@@ -46,7 +46,7 @@ export function PartTile({
           <span className={s.tileStatus}>{STATUS_LABEL[part.status]}</span>
           {badge && (
             <span
-              className={`${s.tileBadge} ${badge.inStep ? '' : s.tileBadgeOff}`}
+              className={`${s.linkBadge} ${s.tileBadge} ${badge.inStep ? '' : s.linkBadgeOff}`}
               title={badge.title}
             >
               <LinkIcon />

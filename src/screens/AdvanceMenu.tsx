@@ -1,5 +1,5 @@
 import type { Part, PartStatus } from '../types.ts';
-import { STATUS_TOKENS, nextStatus, otherSteps } from '../derive.ts';
+import { STATUS_TOKENS, nextStatus, otherSteps, stepName } from '../derive.ts';
 import s from './build.module.css';
 
 export interface PartActions {
@@ -19,22 +19,21 @@ export interface PartActions {
 const MENU_WIDTH = 268;
 const MENU_HEIGHT = 384;
 
-export interface MenuPlace {
-  left: boolean;
-  up: boolean;
-}
-
-/** A row is wider than the menu and anchors right; a tile takes whichever corner fits. */
-export const menuPlace = (el: Element, anchor: 'row' | 'tile'): MenuPlace => {
+/**
+ * The classes that hang the menu off a corner with room, decided at the click.
+ * An opener wider than the menu keeps the right edge; a narrower one — a tile —
+ * takes the left, unless the window ends first. Measured rather than told which
+ * kind of opener it is, so a third one needs no edit here.
+ */
+export const menuPlace = (el: Element): string => {
   const box = el.getBoundingClientRect();
-  return {
-    left: anchor === 'tile' && box.left + MENU_WIDTH <= window.innerWidth,
-    up: box.bottom + MENU_HEIGHT > window.innerHeight,
-  };
+  const left = box.width < MENU_WIDTH && box.left + MENU_WIDTH <= window.innerWidth;
+  const up = box.bottom + MENU_HEIGHT > window.innerHeight;
+  return `${up ? s.menuUp : ''} ${left ? s.menuLeft : ''}`;
 };
 
 const stepLabel = (status: PartStatus) =>
-  status === 'queued' ? 'Back to queue' : status.charAt(0).toUpperCase() + status.slice(1);
+  status === 'queued' ? 'Back to queue' : stepName(status);
 
 /** Every step a part can move to, then the things you can do to the part itself. */
 export function AdvanceMenu({
@@ -47,7 +46,8 @@ export function AdvanceMenu({
   part: Part;
   /** The rest of this part's assembly — the count on the link item. */
   links: Part[];
-  place: MenuPlace;
+  /** Corner classes from `menuPlace`, measured when the opener was clicked. */
+  place: string;
   actions: PartActions;
   onClose: () => void;
 }) {
@@ -58,7 +58,7 @@ export function AdvanceMenu({
 
   return (
     <div
-      className={`${s.menu} ${place.up ? s.menuUp : ''} ${place.left ? s.menuLeft : ''}`}
+      className={`${s.menu} ${place}`}
       onClick={(e) => e.stopPropagation()}
     >
       <div className={s.menuKicker}>MOVE TO STEP</div>

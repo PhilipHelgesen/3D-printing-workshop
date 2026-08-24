@@ -59,8 +59,20 @@ export const partsDone = (b: Build) => b.parts.filter((p) => p.status === 'done'
 export const progressPct = (b: Build) =>
   b.parts.length === 0 ? 0 : (partsDone(b) / b.parts.length) * 100;
 
+/**
+ * The parts at one step. The build page's whole claim is that the number on a
+ * stage and the list under it are the same set (ADR-0006), so they are one
+ * expression rather than two that happen to agree.
+ */
+export const partsAt = (parts: Part[], status: PartStatus) =>
+  parts.filter((p) => p.status === status);
+
 export const countByStatus = (parts: Part[], status: PartStatus) =>
-  parts.filter((p) => p.status === status).length;
+  partsAt(parts, status).length;
+
+/** A status as a heading reads: QUEUED → Queued. `STATUS_LABEL` is the shouted form. */
+export const stepName = (status: PartStatus) =>
+  STATUS_LABEL[status].charAt(0) + STATUS_LABEL[status].slice(1).toLowerCase();
 
 /**
  * Pills shown on a build card: non-zero counts, pipeline order with queued last.
@@ -141,7 +153,8 @@ export function timeAgo(iso: string, now = Date.now()): string {
   return shortDate(iso);
 }
 
-export const shortDate = (iso: string) =>
+/** Only `timeAgo` reaches for this now — anything older than a week reads as a date. */
+const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
 export const buildUpdatedAt = (b: Build) =>

@@ -16,17 +16,15 @@ const normalizePartStatus = (status: string): PartStatus =>
 export function normalizeState(state: State): State {
   return {
     ...state,
-    builds: state.builds.map(({ ...build }) => {
-      // `deadline` was deleted with the whole idea of a date on a build (ADR-0006).
-      delete (build as Build & { deadline?: string }).deadline;
-      return {
-        ...build,
-        parts: build.parts.map((part) => ({
-          ...part,
-          status: normalizePartStatus(part.status),
-        })),
-      };
-    }),
+    // `deadline` was deleted with the whole idea of a date on a build (ADR-0006);
+    // the rest pattern drops it from copies still carrying it.
+    builds: state.builds.map(({ deadline: _gone, ...build }: Build & { deadline?: string }) => ({
+      ...build,
+      parts: build.parts.map((part) => ({
+        ...part,
+        status: normalizePartStatus(part.status),
+      })),
+    })),
   };
 }
 

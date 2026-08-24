@@ -162,6 +162,11 @@
   text-align: center;
 }
 
+/* A stage with nothing at it can't be picked, and reads that way. */
+.stage:disabled .stageLabel {
+  color: var(--muted);
+}
+
 .filterRow {
   display: flex;
   align-items: center;
@@ -432,29 +437,38 @@
 .photo {
   display: block;
   width: 100%;
-  padding: 0;
-  border: none;
   border-radius: var(--radius-icon);
   overflow: hidden;
-  background: none;
   line-height: 0;
   cursor: pointer;
 }
 
+/* The box is reserved before the bytes land, so the rail doesn't jump. */
 .photo img {
   width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
   display: block;
 }
 
 .photoEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   aspect-ratio: 4 / 3;
   border: 2px dashed var(--border-dashed);
   border-radius: var(--radius-icon);
-  background: transparent;
   color: var(--muted);
   font: 700 11px var(--font-sans);
   cursor: pointer;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
 }
 
 .photoError {
@@ -555,19 +569,9 @@
   color: var(--muted);
 }
 
+/* The row's badge, pushed to the tile's far corner. */
 .tileBadge {
   margin-left: auto;
-  display: flex;
-  color: var(--sea-dark);
-}
-
-.tileBadge svg {
-  width: 11px;
-  height: 11px;
-}
-
-.tileBadgeOff {
-  color: var(--lemon);
 }
 
 .tileName {

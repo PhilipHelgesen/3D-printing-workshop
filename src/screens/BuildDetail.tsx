@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import type { Build, Part, PartStatus, Screen } from '../types.ts';
 import {
   STAGES,
-  STATUS_LABEL,
   STATUS_TOKENS,
   assemblies,
   buildUpdatedAt,
   countByStatus,
   partRows,
+  partsAt,
   partsDone,
   siblings,
   sortByProgress,
+  stepName,
   timeAgo,
 } from '../derive.ts';
 import { PHOTO_EDGE, uploadImage } from '../icons.ts';
@@ -23,9 +24,6 @@ import s from './build.module.css';
 
 /** Bars read against each other, not against the column: +8px a part, capped. */
 const barHeight = (count: number) => (count === 0 ? 5 : Math.min(62, 4 + 8 * count));
-
-const stageLabel = (status: PartStatus) =>
-  STATUS_LABEL[status].charAt(0) + STATUS_LABEL[status].slice(1).toLowerCase();
 
 /**
  * The pipeline, and the way the page is filtered. The maker arrives having
@@ -70,9 +68,7 @@ function StageFlow({
                 background: empty ? 'var(--track)' : STATUS_TOKENS[stage.status].solid,
               }}
             />
-            <span className={s.stageLabel} style={empty && !on ? { color: 'var(--muted)' } : undefined}>
-              {stage.label}
-            </span>
+            <span className={s.stageLabel}>{stage.label}</span>
           </button>
         );
       })}
@@ -167,7 +163,6 @@ function BuildNote({ note, onSave }: { note?: string; onSave: (note: string) => 
  * slicer screenshot — which is the point: it has to be there while the work is.
  */
 function BuildPhoto({ image, onPick }: { image?: string; onPick: (url: string) => void }) {
-  const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -189,25 +184,20 @@ function BuildPhoto({ image, onPick }: { image?: string; onPick: (url: string) =
   return (
     <div className={ui.railBlock}>
       <div className={ui.kicker}>THIS BUILD</div>
-      <input ref={input} type="file" accept="image/*" hidden onChange={choose} />
-      {image ? (
-        <button
-          className={s.photo}
-          onClick={() => input.current?.click()}
+      <label
+        className={image ? s.photo : s.photoEmpty}
+        title={uploading ? 'Adding…' : image ? 'Replace photo' : undefined}
+      >
+        {image ? <img src={image} alt="" /> : uploading ? 'Adding…' : '+ Add photo'}
+        <input
+          type="file"
+          accept="image/*"
+          className={s.fileInput}
+          aria-label={image ? 'Replace the build photo' : 'Add a build photo'}
           disabled={uploading}
-          title={uploading ? 'Replacing…' : 'Replace photo'}
-        >
-          <img src={image} alt="" style={uploading ? { opacity: 0.5 } : undefined} />
-        </button>
-      ) : (
-        <button
-          className={s.photoEmpty}
-          onClick={() => input.current?.click()}
-          disabled={uploading}
-        >
-          {uploading ? 'Adding…' : '+ Add photo'}
-        </button>
-      )}
+          onChange={choose}
+        />
+      </label>
       {error && <div className={s.photoError}>{error}</div>}
     </div>
   );
@@ -262,11 +252,9 @@ export function BuildDetail({
 
   // The screen owns filtering and sorting; derive turns what's left into rows.
   const kept = useMemo(() => {
-    const filtered = stage ? build.parts.filter((p) => p.status === stage) : build.parts;
+    const filtered = stage ? partsAt(build.parts, stage) : build.parts;
     return sortMode === 'progress' ? sortByProgress(filtered) : filtered;
   }, [build.parts, stage, sortMode]);
-
-  const rows = useMemo(() => partRows(kept), [kept]);
 
   const actions: PartActions = { ...rowActions, onLink: onLinkPart };
 
@@ -332,7 +320,7 @@ export function BuildDetail({
 
         <div className={s.filterRow}>
           <span style={{ fontWeight: 700, fontSize: 17 }}>
-            {stage ? `${stageLabel(stage)} — ${kept.length}` : `Parts — ${build.parts.length}`}
+            {stage ? `${stepName(stage)} — ${kept.length}` : `Parts — ${build.parts.length}`}
           </span>
           <div className={s.filters}>
             <button
@@ -373,7 +361,7 @@ export function BuildDetail({
           </div>
         ) : (
           <div className={s.rows}>
-            {rows.map((row) =>
+            {partRows(kept).map((row) =>
               Array.isArray(row) ? renderRun(row) : <PartRow key={row.id} {...shared(row)} />,
             )}
           </div>

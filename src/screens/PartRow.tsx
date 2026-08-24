@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Part } from '../types.ts';
 import { assemblyBadge, timeAgo } from '../derive.ts';
-import { AdvanceMenu, LinkIcon, menuPlace, type MenuPlace, type PartActions } from './AdvanceMenu.tsx';
+import { AdvanceMenu, LinkIcon, menuPlace, type PartActions } from './AdvanceMenu.tsx';
 import { StatusPill } from '../ui/StatusPill.tsx';
 import s from './build.module.css';
 
@@ -23,7 +23,7 @@ export function PartRow({
 }) {
   const isDone = part.status === 'done';
   const badge = assemblyBadge(part, links);
-  const [place, setPlace] = useState<MenuPlace>({ left: false, up: false });
+  const [place, setPlace] = useState('');
 
   return (
     <div className={`${s.row} ${isDone ? s.rowDone : ''}`}>
@@ -53,7 +53,7 @@ export function PartRow({
         aria-expanded={menuOpen}
         onClick={(e) => {
           // The menu hangs off the row, not off this button, so the row is what's measured.
-          if (!menuOpen) setPlace(menuPlace(e.currentTarget.parentElement!, 'row'));
+          if (!menuOpen) setPlace(menuPlace(e.currentTarget.parentElement!));
           e.stopPropagation();
           onOpenMenu(menuOpen ? null : part.id);
         }}

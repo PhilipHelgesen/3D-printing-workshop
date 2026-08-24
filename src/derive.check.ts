@@ -7,10 +7,12 @@ import {
   assemblyBadge,
   assemblyMembers,
   batchGroups,
+  countByStatus,
   linkCandidates,
   nextStatus,
   otherSteps,
   partRows,
+  partsAt,
   partsDone,
   partsWaitingOnYou,
   progressColor,
@@ -19,6 +21,7 @@ import {
   siblings,
   sortByProgress,
   statusPills,
+  stepName,
   timeAgo,
 } from './derive.ts';
 import type { Part } from './types.ts';
@@ -200,6 +203,20 @@ assert.equal(candidates.length, dParts.length - 3);
 // —— builds ——
 
 // Deleting a build takes its parts with it and leaves the others alone.
+// —— the parts at a step ——
+// The number on a stage button and the list under it are the same set, which is
+// the build page's whole claim (ADR-0006).
+assert.equal(partsAt(beskar.parts, 'priming').length, countByStatus(beskar.parts, 'priming'));
+assert.ok(partsAt(beskar.parts, 'priming').every((p) => p.status === 'priming'));
+assert.deepEqual(partsAt(beskar.parts, 'done').length, partsDone(beskar));
+// A step nothing is at is empty, not absent.
+assert.deepEqual(partsAt(sword.parts, 'queued'), []);
+
+// A status as a heading, next to the shouted form the pills use.
+assert.equal(stepName('queued'), 'Queued');
+assert.equal(stepName('assembling'), 'Assembling');
+assert.equal(STATUS_LABEL.assembling, 'ASSEMBLING');
+
 // —— a build's photo and note ——
 // Both are optional and replaceable; neither existed before ADR-0006.
 const shot = workshop.setBuildImage(state, beskar.id, 'https://example.test/beskar.webp');
