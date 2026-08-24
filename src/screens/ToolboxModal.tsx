@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent } from 'react';
 import type { ToolboxEntry } from '../types.ts';
 import { ICON_IDS, ICON_TINTS } from '../seed.ts';
-import { isImported, uploadIcon } from '../icons.ts';
+import { ICON_EDGE, isImported, uploadImage } from '../icons.ts';
 import { Modal } from '../ui/Modal.tsx';
 import s from '../ui/modal.module.css';
 
@@ -31,7 +31,7 @@ export function ToolboxModal({
     if (!file) return;
     setUploading(true);
     try {
-      const iconId = await uploadIcon(file);
+      const iconId = await uploadImage(file, ICON_EDGE);
       setDraft((d) => ({ ...d, iconId }));
       setIconError(null);
     } catch (err) {

@@ -47,7 +47,7 @@ Layered so the rules can be read and tested without React:
 ```
 types.ts        the data model, and nothing else
    ↑
-derive.ts       pure read-side: progress, batch groups, next step, formatting
+derive.ts       pure read-side: progress, batch groups, part rows, formatting
 workshop.ts     pure write-side: (state, args) => state for every mutation
    ↑
 store.ts        React glue — useState + localStorage + Supabase sync
@@ -70,8 +70,8 @@ store's action object, one assert in `derive.check.ts`, then the UI.
 
 - `types.ts` — `Part`, `Build`, `ToolboxEntry`, `State`, `Screen`.
 - `derive.ts` — everything computed, never stored: `progressPct`, `statusPills`,
-  `buildPlan`, `batchGroups`, `partRows`, `assemblyBadge`, `timeAgo`, …
-- `workshop.ts` — `moveTo`, `advance`, `addPart`, `linkParts`, `saveEntry`, …
+  `batchGroups`, `partRows`, `assemblyBadge`, `timeAgo`, …
+- `workshop.ts` — `moveTo`, `addPart`, `linkParts`, `saveEntry`, …
   Pure apart from `crypto.randomUUID()` / `new Date()`.
 - `persist.ts` — the workshop copy's decisions, pure: `normalizeState`,
   `parseStored`, `shouldSkipPush`. Imports no React and no Supabase, so the check
@@ -156,19 +156,37 @@ These are product decisions, not accidents. Don't "fix" them.
   selection bar, no "advance them together". Batching is *advice* — the dashboard
   names the group worth one setup — and the parts are then ticked off one by one
   through each row's Advance menu. The square at the head of a row is a done
-  marker, not a control. `moveTo` and `advance` take a single part id; don't
-  widen them back to a list.
+  marker, not a control. `moveTo` takes a single part id; don't widen it back
+  to a list. A tile opens the same menu a row does — it is not a one-click
+  advance.
+- **The build page is stage-led** (ADR-0006). `StageFlow` is the filter: click
+  SAND and the parts below are the ones needing sanding. `All` is the only other
+  filter — "Needs me" and "Done" were deleted as restatements of it. The maker
+  arrives having already picked the operation he's set up for; the page's job is
+  to name the parts ready for it.
+- **A part is shown two ways.** Tiles are the default — the whole build as one
+  field of colour, which is the only view that answers "how much is left". The
+  list is one toggle away and is where notes, times and assemblies read; a
+  bracket can't survive a grid reflow, so a tile carries the link badge only.
+  Both open the same `AdvanceMenu`.
+- **Seven stages, seven colours.** `STATUS_TOKENS` used to map seven statuses
+  onto four tints, which is invisible in a list (the pill spells the stage out)
+  and fatal in tiles (the colour *is* the message). Don't collapse them again.
 - **There is no curing or "hands off" concept.** No cure timer, no print ETA, no
   part is ever unavailable — every part at a station is workable right now. The
   old `curingUntil` field was deleted along with everything that read it: it had
   no writer, so it only ever described mock data. Never re-add scheduling here.
+- **A build has no date on it.** `deadline` went the same way as `curingUntil`
+  and for the same reason — no writer, mock data only (ADR-0006). A build has a
+  `startedAt` and nothing else time-shaped. `normalizeState` strips `deadline`
+  from any blob still carrying it.
+- **A build has a photo and a note**, both optional, both replaceable. The photo
+  is usually the model listing's render or a slicer screenshot, not a finished
+  object — it has to be there while the work is. Model URLs and filament colour
+  were considered and rejected: the maker doesn't want them.
 - **Batch groups are cross-build** and only actionable at **3+ parts**
   (`BATCH_THRESHOLD`). The recommended group is the one clearing the most builds,
   count breaking ties.
-- **A build plan** is the answer to "what do I do next on this build" — the
-  operation, whether it batches with the other builds, and the parts it clears.
-  `buildPlan(build, builds)` composes the whole card; the screens never assemble
-  that wording or count themselves.
 - **The workshop copy** is the rule governing how the local copy and the cloud
   copy of the workshop agree: pull once, cloud wins if it has anything, later
   changes go to localStorage at once and to the cloud on a debounce, never
@@ -191,7 +209,7 @@ These are product decisions, not accidents. Don't "fix" them.
   and `assemblyBadge` hands a row its badge. Rows are built from the *visible*
   parts; a part's siblings are looked up across the *whole build*, so a badge
   survives its siblings being filtered out of view.
-- Everything derived (progress, counts, next step) is **computed, never stored**.
+- Everything derived (progress, counts, batch groups) is **computed, never stored**.
 
 ---
 

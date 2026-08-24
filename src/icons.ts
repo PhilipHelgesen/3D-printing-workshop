@@ -8,12 +8,18 @@ import { supabase } from './supabase.ts';
  */
 export const isImported = (iconId: string) => iconId.startsWith('http') || iconId.startsWith('data:');
 
-/** 2× the 52px chip, so it stays sharp without bloating storage. */
-const MAX_EDGE = 104;
+/** 2× the 52px toolbox chip, so it stays sharp without bloating storage. */
+export const ICON_EDGE = 104;
+/** 2× the rail's photo column. A build photo is looked at, not glanced at. */
+export const PHOTO_EDGE = 640;
 const MAX_SVG_BYTES = 200_000;
 
-/** Downscale to a small blob client-side, then upload. Throws with a readable reason. */
-export async function uploadIcon(file: File): Promise<string> {
+/**
+ * Downscale to a small blob client-side, then upload. Throws with a readable
+ * reason. Everything shares the `icons` bucket — a second bucket would be a
+ * tidier name and nothing else (ADR-0006).
+ */
+export async function uploadImage(file: File, maxEdge: number): Promise<string> {
   if (!file.type.startsWith('image/')) throw new Error('That is not an image file.');
 
   let blob: Blob = file;
@@ -27,7 +33,7 @@ export async function uploadIcon(file: File): Promise<string> {
     const bitmap = await createImageBitmap(file).catch(() => {
       throw new Error("That image couldn't be read.");
     });
-    const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(bitmap.width * scale);
     canvas.height = Math.round(bitmap.height * scale);

@@ -1,36 +1,11 @@
-import { useEffect, useState } from 'react';
-import type { Part, PartStatus } from '../types.ts';
-import { STATUS_TOKENS, assemblyBadge, nextStatus, otherSteps, timeAgo } from '../derive.ts';
+import { useState } from 'react';
+import type { Part } from '../types.ts';
+import { assemblyBadge, timeAgo } from '../derive.ts';
+import { AdvanceMenu, LinkIcon, menuPlace, type MenuPlace, type PartActions } from './AdvanceMenu.tsx';
 import { StatusPill } from '../ui/StatusPill.tsx';
 import s from './build.module.css';
 
-/**
- * How tall the Advance menu stands: ten items of 33px, a kicker, a rule and its
- * padding. A constant because the menu isn't in the DOM until it opens, and the
- * row has to decide which way it goes before that.
- * ponytail: holds while the menu's items are fixed — measure on open if it ever
- * grows a variable section.
- */
-const MENU_HEIGHT = 384;
-
-const stepLabel = (status: PartStatus) =>
-  status === 'queued' ? 'Back to queue' : status.charAt(0).toUpperCase() + status.slice(1);
-
-const LinkIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-    <path d="M10 14a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1" />
-    <path d="M14 10a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1" />
-  </svg>
-);
-
-export interface PartRowActions {
-  onMove: (id: string, status: PartStatus) => void;
-  onRename: (part: Part) => void;
-  onNote: (part: Part) => void;
-  onDelete: (part: Part) => void;
-  onLink: (id: string) => void;
-}
-
+/** A part as a line of detail: its note, its step, when it last moved. */
 export function PartRow({
   part,
   links,
@@ -44,30 +19,11 @@ export function PartRow({
   menuOpen: boolean;
   /** `null` closes; the parent keeps this so only one menu is ever open. */
   onOpenMenu: (id: string | null) => void;
-  actions: PartRowActions;
+  actions: PartActions;
 }) {
   const isDone = part.status === 'done';
   const badge = assemblyBadge(part, links);
-  const [flipped, setFlipped] = useState(false);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const close = () => onOpenMenu(null);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-    };
-    document.addEventListener('click', close);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('click', close);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [menuOpen, onOpenMenu]);
-
-  const pick = (run: () => void) => () => {
-    run();
-    onOpenMenu(null);
-  };
+  const [place, setPlace] = useState<MenuPlace>({ left: false, up: false });
 
   return (
     <div className={`${s.row} ${isDone ? s.rowDone : ''}`}>
@@ -96,13 +52,9 @@ export function PartRow({
         className={`${s.advance} ${menuOpen ? s.advanceOpen : ''}`}
         aria-expanded={menuOpen}
         onClick={(e) => {
+          // The menu hangs off the row, not off this button, so the row is what's measured.
+          if (!menuOpen) setPlace(menuPlace(e.currentTarget.parentElement!, 'row'));
           e.stopPropagation();
-          // Decided at the click, while the row's place on screen is known. The
-          // menu hangs off the row, not off this button, so the row is what's measured.
-          if (!menuOpen) {
-            const row = e.currentTarget.parentElement!.getBoundingClientRect();
-            setFlipped(row.bottom + MENU_HEIGHT > window.innerHeight);
-          }
           onOpenMenu(menuOpen ? null : part.id);
         }}
       >
@@ -110,43 +62,13 @@ export function PartRow({
       </button>
 
       {menuOpen && (
-        <div
-          className={`${s.menu} ${flipped ? s.menuUp : ''}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className={s.menuKicker}>MOVE TO STEP</div>
-          {otherSteps(part.status).map((status) => {
-            const isNext = status === nextStatus(part.status);
-            return (
-              <button
-                key={status}
-                className={`${s.menuItem} ${isNext ? s.menuNext : ''}`}
-                onClick={pick(() => actions.onMove(part.id, status))}
-              >
-                <span className={s.menuDot} style={{ background: STATUS_TOKENS[status].solid }} />
-                {stepLabel(status)}
-                {isNext && <span className={s.menuTag}>next</span>}
-              </button>
-            );
-          })}
-
-          <div className={s.menuRule} />
-          <button className={s.menuItem} onClick={pick(() => actions.onRename(part))}>
-            Rename part
-          </button>
-          <button className={s.menuItem} onClick={pick(() => actions.onNote(part))}>
-            Notes &amp; details
-          </button>
-          <button className={s.menuItem} onClick={pick(() => actions.onLink(part.id))}>
-            {links.length ? `Edit link (${links.length + 1})` : 'Link part'}
-          </button>
-          <button
-            className={`${s.menuItem} ${s.menuDanger}`}
-            onClick={pick(() => actions.onDelete(part))}
-          >
-            Delete part
-          </button>
-        </div>
+        <AdvanceMenu
+          part={part}
+          links={links}
+          place={place}
+          actions={actions}
+          onClose={() => onOpenMenu(null)}
+        />
       )}
     </div>
   );

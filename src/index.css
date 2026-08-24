@@ -16,12 +16,18 @@
   --sea-tint: #b3d9e0;
   --lemon: #a06f05;
   --lemon-tint: #f7e3bd;
-  --basil: #4f7268;
-  --basil-tint: #d6e3de;
+  --basil: #5b9068; /* done — lighter than the assembly blue it used to share a token with */
+  --basil-tint: #d9efdb;
+  --indigo: #3d5a80; /* assembling — dark blue, distinct from the printing teal */
+  --indigo-tint: #cfdcee;
   --terra: #84572f;
   --terra-dark: #6d4526;
-  --neutral: #a08a72;
+  --neutral: #a08a72; /* sanding — warm dust */
   --neutral-tint: #edd5c0;
+  --stone: #8e8579; /* queued — greyer and flatter than sanding: nothing has happened yet */
+  --stone-tint: #e4ded5;
+  --olive: #7f7a35; /* priming — the cooler half of the yellow pair, painting keeps lemon */
+  --olive-tint: #e6e4c0;
 
   /* text */
   --ink: #3a2a1c;

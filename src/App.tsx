@@ -88,14 +88,14 @@ function Workshop() {
             // Remount on a different build so per-build view state can't leak across.
             key={openBuild.id}
             build={openBuild}
-            builds={builds}
             onNavigate={navigate}
             onBack={() => setOpenBuildId(null)}
             onAddPart={() => setAddingPart(true)}
             onRenameBuild={(name) => store.renameBuild(openBuild.id, name)}
             onDeleteBuild={() => setDeletingBuild(true)}
-            onAdvance={store.advance}
             onLinkPart={setLinkingPartId}
+            onSetImage={(image) => store.setBuildImage(openBuild.id, image)}
+            onSetNote={(note) => store.setBuildNote(openBuild.id, note)}
             rowActions={rowActions}
           />
         ) : (
