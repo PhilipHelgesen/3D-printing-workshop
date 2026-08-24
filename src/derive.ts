@@ -60,6 +60,18 @@ export const progressPct = (b: Build) =>
   b.parts.length === 0 ? 0 : (partsDone(b) / b.parts.length) * 100;
 
 /**
+ * How tall a stage's bar stands. Bars read against each other, not against the
+ * column: +`step` a part, capped. The mini chart on an assembly head passes a
+ * smaller step and cap so the same counts draw smaller.
+ */
+export const barHeight = (count: number, step = 8, max = 62) =>
+  count === 0 ? 5 : Math.min(max, 4 + step * count);
+
+/** Past three, pieces stop being countable and the bar is drawn solid instead. */
+const MAX_SEGMENTS = 3;
+export const isSegmented = (count: number) => count > 0 && count <= MAX_SEGMENTS;
+
+/**
  * The parts at one step. The build page's whole claim is that the number on a
  * stage and the list under it are the same set (ADR-0006), so they are one
  * expression rather than two that happen to agree.
@@ -189,8 +201,10 @@ export const sortByProgress = (parts: Part[]): Part[] =>
  * scatter them by sorting — an assembly arrives as one row, whole.
  *
  * Runs are built from the parts handed in, so a member filtered out of view
- * simply isn't in the run; a group with one member left standing is a plain row,
- * since a bracket over a single part means nothing.
+ * simply isn't in the run. A run of one is still a run: it used to be flattened
+ * because a bracket over a single part means nothing, but a run now carries the
+ * assembly's name, and being told the part on screen is the last of "Right leg"
+ * is exactly what you want when filtering has hidden the rest.
  */
 export function partRows(parts: Part[]): (Part | Part[])[] {
   const byGroup = assemblies(parts);
@@ -200,10 +214,18 @@ export function partRows(parts: Part[]): (Part | Part[])[] {
     if (seen.has(p.id)) continue;
     const members = p.linkGroupId ? byGroup.get(p.linkGroupId)! : [p];
     for (const m of members) seen.add(m.id);
-    rows.push(members.length > 1 ? members : members[0]);
+    rows.push(p.linkGroupId ? members : members[0]);
   }
   return rows;
 }
+
+/**
+ * What a run of linked parts is called, or `undefined` while it is unnamed —
+ * the head renders its own invitation for that. Here rather than in the screen
+ * because "the name lives on every member" is the model's business, not the
+ * list's.
+ */
+export const assemblyName = (members: Part[]) => members[0]?.linkGroupName;
 
 export interface AssemblyBadge {
   /** Who else is in the assembly, and which of them have fallen behind. */

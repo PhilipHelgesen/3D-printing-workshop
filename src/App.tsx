@@ -96,6 +96,7 @@ function Workshop() {
             onLinkPart={setLinkingPartId}
             onSetImage={(image) => store.setBuildImage(openBuild.id, image)}
             onSetNote={(note) => store.setBuildNote(openBuild.id, note)}
+            onNameAssembly={store.nameAssembly}
             rowActions={rowActions}
           />
         ) : (

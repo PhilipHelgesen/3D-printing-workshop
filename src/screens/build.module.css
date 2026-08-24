@@ -152,7 +152,14 @@
 
 .stageBar {
   width: 100%;
-  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stagePiece {
+  flex: 1;
+  border-radius: 5px;
 }
 
 .stageLabel {
@@ -598,4 +605,81 @@
   padding: 0;
   cursor: pointer;
   text-decoration: underline;
+}
+
+/* ——— an assembly's head: what the group is called, and where its parts sit ——— */
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface-sunk);
+  cursor: pointer;
+}
+
+.groupHead:hover {
+  background: var(--hairline);
+}
+
+/* Shut, it is the only thing left of the group — give it a little more presence. */
+.groupCollapsed {
+  box-shadow: var(--shadow-row);
+}
+
+.groupName {
+  font: 700 13px var(--font-sans);
+  color: var(--ink);
+}
+
+.groupNameEmpty {
+  font: 600 11px var(--font-sans);
+  color: var(--sea);
+}
+
+.groupCount {
+  font: 400 10.5px var(--font-mono);
+  color: var(--muted);
+}
+
+.groupField {
+  font: 700 13px var(--font-sans);
+  color: var(--ink);
+  background: var(--surface);
+  border: none;
+  border-radius: 9px;
+  padding: 3px 8px;
+  margin: -3px 0;
+  width: 220px;
+}
+
+.groupField:focus-visible {
+  outline: 2px solid var(--sea);
+  outline-offset: 1px;
+}
+
+/* The same seven positions as the chart above, at header scale. */
+.miniFlow {
+  margin-left: auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  width: 112px;
+  height: 20px;
+  flex: none;
+}
+
+.miniStage {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+}
+
+.miniFlow .stagePiece {
+  border-radius: 2px;
+}
+
+.miniFlow .stageBar {
+  gap: 1.5px;
 }

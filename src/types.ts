@@ -17,6 +17,8 @@ export interface Part {
   updatedAt: string; // ISO
   note?: string;
   linkGroupId?: string; // parts sharing this id are one assembly and should stay in step
+  /** The assembly's name, held by every member — there is no group record to hang it on. */
+  linkGroupName?: string;
 }
 
 export interface Build {

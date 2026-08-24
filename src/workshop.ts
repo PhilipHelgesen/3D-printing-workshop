@@ -29,7 +29,9 @@ function pruneLoneGroups(parts: Part[]): Part[] {
     if (p.linkGroupId) size.set(p.linkGroupId, (size.get(p.linkGroupId) ?? 0) + 1);
   }
   return parts.map((p) =>
-    p.linkGroupId && size.get(p.linkGroupId)! < 2 ? { ...p, linkGroupId: undefined } : p,
+    p.linkGroupId && size.get(p.linkGroupId)! < 2
+      ? { ...p, linkGroupId: undefined, linkGroupName: undefined }
+      : p,
   );
 }
 
@@ -75,13 +77,34 @@ export function linkParts(state: State, ids: string[]): State {
   for (const p of all) if (p.linkGroupId && touched.has(p.linkGroupId)) members.add(p.id);
   // Keep the existing id when only one group is involved, so the group survives edits.
   const groupId = touched.size === 1 ? [...touched][0] : crypto.randomUUID();
-  return mapParts(state, only([...members], (p) => ({ ...p, linkGroupId: groupId })));
+  // Merging two assemblies keeps the first name it finds rather than losing both.
+  const name = all.find((p) => members.has(p.id) && p.linkGroupName)?.linkGroupName;
+  return mapParts(
+    state,
+    only([...members], (p) => ({ ...p, linkGroupId: groupId, linkGroupName: name })),
+  );
+}
+
+/**
+ * Names the assembly a part belongs to. The name lives on every member, so this
+ * writes them all — the same shape `linkParts` uses for the id.
+ */
+export function nameAssembly(state: State, id: string, name: string): State {
+  const groupId = state.builds.flatMap((b) => b.parts).find((p) => p.id === id)?.linkGroupId;
+  if (!groupId) return state;
+  return mapParts(state, (p) =>
+    p.linkGroupId === groupId ? { ...p, linkGroupName: name || undefined } : p,
+  );
 }
 
 export const removeFromGroup = (state: State, id: string): State =>
   mapBuilds(state, (b) => ({
     ...b,
-    parts: pruneLoneGroups(b.parts.map((p) => (p.id === id ? { ...p, linkGroupId: undefined } : p))),
+    parts: pruneLoneGroups(
+      b.parts.map((p) =>
+        p.id === id ? { ...p, linkGroupId: undefined, linkGroupName: undefined } : p,
+      ),
+    ),
   }));
 
 // ——— builds ———

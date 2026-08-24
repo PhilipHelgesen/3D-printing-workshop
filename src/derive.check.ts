@@ -6,6 +6,8 @@ import {
   assemblies,
   assemblyBadge,
   assemblyMembers,
+  assemblyName,
+  barHeight,
   batchGroups,
   countByStatus,
   linkCandidates,
@@ -15,6 +17,7 @@ import {
   partsAt,
   partsDone,
   partsWaitingOnYou,
+  isSegmented,
   progressColor,
   progressPct,
   recommendedGroup,
@@ -151,10 +154,59 @@ assert.deepEqual(
 // Sorting can't scatter a group — the members are already inside one row.
 assert.equal(partRows(sortByProgress(partsOf(trio))).filter(isRun)[0].length, 3);
 
-// Filtering can leave one member visible; one part is a plain row, not a bracket over itself.
+// Filtering can leave one member visible. A run of one still carries its assembly:
+// the old rule pruned it because a bracket over a single part means nothing, but a
+// run is now headed by the assembly's name, and a name over one part means plenty.
 const loneMember = partsOf(trio).filter((p) => p.id !== pauldronR.id && p.id !== vambraceL.id);
 assert.equal(loneMember.some((p) => p.linkGroupId), true);
-assert.equal(partRows(loneMember).some(isRun), false);
+assert.equal(partRows(loneMember).filter(isRun).length, 1);
+// A part in no assembly is still a plain row, not a run of one.
+assert.equal(partRows(beskar.parts).some(isRun), false);
+
+// —— what an assembly is called ——
+// Unnamed until the maker says otherwise — the head renders its own invitation.
+assert.equal(assemblyName(partsOf(trio).filter((p) => p.linkGroupId)), undefined);
+
+const named = workshop.nameAssembly(trio, pauldronL.id, 'Right pauldron');
+const namedMembers = partsOf(named).filter((p) => p.linkGroupId);
+assert.equal(assemblyName(namedMembers), 'Right pauldron');
+// The name lives on every member — there is no group record to hang it on.
+assert.equal(namedMembers.every((p) => p.linkGroupName === 'Right pauldron'), true);
+assert.equal(namedMembers.length, 3);
+// Parts outside the assembly are untouched.
+assert.equal(partsOf(named).filter((p) => p.linkGroupName).length, 3);
+// Clearing drops the key rather than storing an empty string.
+assert.equal(
+  partsOf(workshop.nameAssembly(named, pauldronL.id, '')).some((p) => p.linkGroupName),
+  false,
+);
+// Naming a part that belongs to no assembly changes nothing.
+assert.deepEqual(workshop.nameAssembly(state, partsOf(state)[0].id, 'Nope'), state);
+
+// Merging two assemblies keeps a name rather than losing both.
+const mergedNamed = workshop.linkParts(named, [pauldronL.id, vambraceR.id]);
+assert.equal(
+  partsOf(mergedNamed).find((p) => p.id === vambraceR.id)?.linkGroupName,
+  'Right pauldron',
+);
+// Leaving an assembly drops the name with the id.
+assert.equal(
+  partsOf(workshop.removeFromGroup(named, pauldronR.id)).find((p) => p.id === pauldronR.id)
+    ?.linkGroupName,
+  undefined,
+);
+
+// —— how a stage bar is drawn ——
+// Up to three parts you can count the pieces; past that the bar goes solid.
+assert.equal(isSegmented(0), false);
+assert.equal(isSegmented(1), true);
+assert.equal(isSegmented(3), true);
+assert.equal(isSegmented(4), false);
+// Height still reports the count, which is what the two charts have in common.
+assert.equal(barHeight(0), 5);
+assert.ok(barHeight(2) > barHeight(1));
+assert.equal(barHeight(99), barHeight(99, 8, 62), 'the cap is the cap');
+assert.ok(barHeight(3, 4, 20) < barHeight(3), 'the mini chart draws the same counts smaller');
 
 // A row is a whole assembly, never a slice of one: two rows here carry four parts.
 assert.equal(partRows(partsOf(trio)).slice(0, 2).flat().length, 4);

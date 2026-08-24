@@ -4,8 +4,11 @@ import {
   STAGES,
   STATUS_TOKENS,
   assemblies,
+  assemblyName,
+  barHeight,
   buildUpdatedAt,
   countByStatus,
+  isSegmented,
   partRows,
   partsAt,
   partsDone,
@@ -22,8 +25,25 @@ import type { PartActions } from './AdvanceMenu.tsx';
 import ui from '../ui/ui.module.css';
 import s from './build.module.css';
 
-/** Bars read against each other, not against the column: +8px a part, capped. */
-const barHeight = (count: number) => (count === 0 ? 5 : Math.min(62, 4 + 8 * count));
+/**
+ * One stage's bar. Up to three parts it is drawn as that many pieces you can
+ * count; past that the pieces stop being countable and it goes solid. The height
+ * carries the count either way, which is what the two charts have in common.
+ */
+function StageBar({ count, color, height }: { count: number; color: string; height: number }) {
+  const pieces = isSegmented(count) ? count : 1;
+  return (
+    <span className={s.stageBar} style={{ height }}>
+      {Array.from({ length: pieces }, (_, i) => (
+        <span key={i} className={s.stagePiece} style={{ background: color }} />
+      ))}
+    </span>
+  );
+}
+
+/** `empty` is the track colour, which has to stand off whatever the bar sits on. */
+const stageColor = (count: number, status: PartStatus, empty = 'var(--track)') =>
+  count === 0 ? empty : STATUS_TOKENS[status].solid;
 
 /**
  * The pipeline, and the way the page is filtered. The maker arrives having
@@ -61,17 +81,116 @@ function StageFlow({
             onClick={() => onPick(on ? null : stage.status)}
           >
             <span className={`${s.stageCount} ${empty ? s.stageEmpty : ''}`}>{count}</span>
-            <span
-              className={s.stageBar}
-              style={{
-                height: barHeight(count),
-                background: empty ? 'var(--track)' : STATUS_TOKENS[stage.status].solid,
-              }}
+            <StageBar
+              count={count}
+              color={stageColor(count, stage.status)}
+              height={barHeight(count)}
             />
             <span className={s.stageLabel}>{stage.label}</span>
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * The assembly's spread across the pipeline, at header scale: no counts, no
+ * labels, the tooltip carries the breakdown. It reports the whole assembly, not
+ * the slice filtering has left on screen — the head is about the assembly.
+ */
+function MiniFlow({ members }: { members: Part[] }) {
+  const spread = STAGES.map((stage) => ({ ...stage, count: countByStatus(members, stage.status) }));
+  const title = spread
+    .filter((s) => s.count > 0)
+    .map((s) => `${s.count} ${stepName(s.status).toLowerCase()}`)
+    .join(' · ');
+
+  return (
+    <span className={s.miniFlow} title={title}>
+      {spread.map((stage) => (
+        <span key={stage.status} className={s.miniStage}>
+          <StageBar
+            count={stage.count}
+            color={stageColor(stage.count, stage.status, 'var(--border)')}
+            height={barHeight(stage.count, 4, 20)}
+          />
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * The head of an assembly in the list: what the group is called, how much of it
+ * you're looking at, and where its members sit. No badge, no timestamp, no
+ * Advance — those belong to a part, and this is not one.
+ */
+function AssemblyHead({
+  visible,
+  all,
+  collapsed,
+  onToggle,
+  onName,
+}: {
+  /** The members currently on screen; `all` is the assembly whole. */
+  visible: Part[];
+  all: Part[];
+  collapsed: boolean;
+  onToggle: () => void;
+  onName: (name: string) => void;
+}) {
+  const stored = assemblyName(all);
+  const [draft, setDraft] = useState<string | null>(null);
+
+  const save = () => {
+    const trimmed = (draft ?? '').trim();
+    if (trimmed !== (stored ?? '')) onName(trimmed);
+    setDraft(null);
+  };
+
+  // The whole strip toggles, so anything you can click inside it has to stop there.
+  const own = (e: { stopPropagation: () => void }) => e.stopPropagation();
+
+  return (
+    <div className={`${s.groupHead} ${collapsed ? s.groupCollapsed : ''}`} onClick={onToggle}>
+      {draft === null ? (
+        <>
+          <span className={stored ? s.groupName : s.groupNameEmpty}>
+            {stored || '+ Name this assembly'}
+          </span>
+          {visible.length < all.length && (
+            <span className={s.groupCount}>
+              · {visible.length} of {all.length}
+            </span>
+          )}
+          <button
+            className={s.namePen}
+            aria-label={stored ? `Rename ${stored}` : 'Name this assembly'}
+            onClick={(e) => {
+              own(e);
+              setDraft(stored ?? '');
+            }}
+          >
+            ✎
+          </button>
+        </>
+      ) : (
+        <input
+          className={s.groupField}
+          autoFocus
+          placeholder="Name this assembly"
+          value={draft}
+          onClick={own}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') save();
+            if (e.key === 'Escape') setDraft(null);
+          }}
+        />
+      )}
+      <MiniFlow members={all} />
     </div>
   );
 }
@@ -213,6 +332,7 @@ export function BuildDetail({
   onLinkPart,
   onSetImage,
   onSetNote,
+  onNameAssembly,
   rowActions,
 }: {
   build: Build;
@@ -224,12 +344,16 @@ export function BuildDetail({
   onLinkPart: (id: string) => void;
   onSetImage: (image: string) => void;
   onSetNote: (note: string) => void;
+  onNameAssembly: (partId: string, name: string) => void;
   rowActions: Omit<PartActions, 'onLink'>;
 }) {
   const [stage, setStage] = useState<PartStatus | null>(null);
   const [view, setView] = useState<'tiles' | 'list'>('tiles');
   const [sortMode, setSortMode] = useState<'recent' | 'progress'>('recent');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  // "Get this out of my way for a minute" — not a property of the assembly, so
+  // it lives here and every group is open again next time the build is opened.
+  const [collapsed, setCollapsed] = useState<string[]>([]);
 
   // One listener for the whole page: only one menu is ever open.
   useEffect(() => {
@@ -266,15 +390,28 @@ export function BuildDetail({
     actions,
   });
 
-  // An assembly arrives as one row, so a single bracket spans exactly its members.
-  const renderRun = (run: Part[]) => (
-    <div key={`group-${run[0].id}`} className={s.linkGroup}>
-      <div className={s.linkBracket} />
-      {run.map((part) => (
-        <PartRow key={part.id} {...shared(part)} />
-      ))}
-    </div>
-  );
+  // An assembly arrives as one row: the bracket spans its head and its members.
+  const renderRun = (run: Part[]) => {
+    const groupId = run[0].linkGroupId!;
+    const isShut = collapsed.includes(groupId);
+    return (
+      <div key={groupId} className={s.linkGroup}>
+        <div className={s.linkBracket} />
+        <AssemblyHead
+          visible={run}
+          all={byGroup.get(groupId) ?? run}
+          collapsed={isShut}
+          onToggle={() =>
+            setCollapsed((ids) =>
+              ids.includes(groupId) ? ids.filter((x) => x !== groupId) : [...ids, groupId],
+            )
+          }
+          onName={(name) => onNameAssembly(run[0].id, name)}
+        />
+        {!isShut && run.map((part) => <PartRow key={part.id} {...shared(part)} />)}
+      </div>
+    );
+  };
 
   return (
     <div className={`${ui.page} ${ui.pageWide}`}>
