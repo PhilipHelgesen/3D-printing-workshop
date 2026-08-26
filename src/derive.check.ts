@@ -290,6 +290,53 @@ assert.equal(without.builds.some((b) => b.id === hunter.id), false);
 assert.equal(without.builds.flatMap((b) => b.parts).some((p) => p.buildId === hunter.id), false);
 assert.equal(without.toolbox.length, state.toolbox.length);
 
+// —— hand order: the parts array is the order, moves stated against a target ——
+const ids = (s: typeof state) => partsOf(s).map((p) => p.id);
+const [first, second, third, fourth] = ids(state);
+
+// Dropping the first part below the third: it lands after it, the rest close up.
+const moved = workshop.reorderPart(state, first, third, false);
+assert.deepEqual(ids(moved).slice(0, 3), [second, third, first]);
+assert.equal(partsOf(moved).length, partsOf(state).length);
+
+// Dropping it above instead puts it in front of the same target.
+assert.deepEqual(ids(workshop.reorderPart(state, first, third, true)).slice(0, 3), [
+  second,
+  first,
+  third,
+]);
+
+// Moving backwards works the same way — the index is looked up after the lift.
+assert.deepEqual(ids(workshop.reorderPart(state, fourth, second, true)).slice(0, 4), [
+  first,
+  fourth,
+  second,
+  third,
+]);
+
+// A part dropped on itself, or on something that isn't there, changes nothing.
+assert.equal(workshop.reorderPart(state, first, first, true), state);
+assert.deepEqual(ids(workshop.reorderPart(state, first, 'gone', true)), ids(state));
+
+// —— a whole assembly moves as one block ——
+const grouped = workshop.linkParts(state, [second, fourth]);
+const groupId = groupOf(grouped, second)!;
+const blockMoved = workshop.reorderGroup(grouped, groupId, first, true);
+assert.deepEqual(ids(blockMoved).slice(0, 3), [second, fourth, first]);
+assert.equal(partsOf(blockMoved).length, partsOf(state).length);
+
+// Dropped after a part, the members stay contiguous and in their own order.
+assert.deepEqual(ids(workshop.reorderGroup(grouped, groupId, third, false)).slice(0, 4), [
+  first,
+  third,
+  second,
+  fourth,
+]);
+
+// A group dropped on one of its own members, or on nothing, doesn't move.
+assert.deepEqual(ids(workshop.reorderGroup(grouped, groupId, second, true)), ids(grouped));
+assert.deepEqual(ids(workshop.reorderGroup(grouped, groupId, 'gone', true)), ids(grouped));
+
 // —— stamps ——
 const ago = (ms: number) => new Date(now - ms).toISOString();
 assert.equal(timeAgo(ago(14 * 60_000), now), '14m ago');

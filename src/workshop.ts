@@ -59,6 +59,48 @@ export const addPart = (state: State, buildId: string, name: string, note?: stri
       : b,
   );
 
+/**
+ * Hand order is the parts array itself — there is no order field to keep in
+ * sync, and no second source of truth to disagree with it. The move is stated
+ * relative to a target part rather than an index, so it stays well-defined when
+ * a stage filter has hidden whatever sits between the two on screen.
+ */
+export function reorderPart(state: State, id: string, targetId: string, before: boolean): State {
+  if (id === targetId) return state;
+  return mapBuilds(state, (b) => {
+    const from = b.parts.findIndex((p) => p.id === id);
+    if (from < 0 || !b.parts.some((p) => p.id === targetId)) return b;
+    const parts = [...b.parts];
+    const [moved] = parts.splice(from, 1);
+    // Looked up after the splice: pulling the part out shifts everything behind it.
+    const at = parts.findIndex((p) => p.id === targetId);
+    parts.splice(before ? at : at + 1, 0, moved);
+    return { ...b, parts };
+  });
+}
+
+/**
+ * The same move for a whole assembly: its members leave the array together and
+ * land together, so a group can be dragged as the one thing it looks like.
+ */
+export function reorderGroup(
+  state: State,
+  groupId: string,
+  targetId: string,
+  before: boolean,
+): State {
+  return mapBuilds(state, (b) => {
+    const block = b.parts.filter((p) => p.linkGroupId === groupId);
+    // Dropping a group on one of its own members would be a move to nowhere.
+    if (!block.length || block.some((p) => p.id === targetId)) return b;
+    const rest = b.parts.filter((p) => p.linkGroupId !== groupId);
+    const at = rest.findIndex((p) => p.id === targetId);
+    if (at < 0) return b;
+    rest.splice(before ? at : at + 1, 0, ...block);
+    return { ...b, parts: rest };
+  });
+}
+
 export const deletePart = (state: State, id: string): State =>
   mapBuilds(state, (b) => ({ ...b, parts: pruneLoneGroups(b.parts.filter((p) => p.id !== id)) }));
 

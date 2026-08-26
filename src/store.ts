@@ -95,6 +95,10 @@ export function useStore() {
       setNote: (id: string, note: string) => setState((s) => workshop.setNote(s, id, note)),
       deletePart: (id: string) => setState((s) => workshop.deletePart(s, id)),
       linkParts: (ids: string[]) => setState((s) => workshop.linkParts(s, ids)),
+      reorderPart: (id: string, targetId: string, before: boolean) =>
+        setState((s) => workshop.reorderPart(s, id, targetId, before)),
+      reorderGroup: (groupId: string, targetId: string, before: boolean) =>
+        setState((s) => workshop.reorderGroup(s, groupId, targetId, before)),
       nameAssembly: (id: string, name: string) =>
         setState((s) => workshop.nameAssembly(s, id, name)),
       removeFromGroup: (id: string) => setState((s) => workshop.removeFromGroup(s, id)),

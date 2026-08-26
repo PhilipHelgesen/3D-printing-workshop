@@ -97,6 +97,10 @@ function Workshop() {
             onSetImage={(image) => store.setBuildImage(openBuild.id, image)}
             onSetNote={(note) => store.setBuildNote(openBuild.id, note)}
             onNameAssembly={store.nameAssembly}
+            onLinkParts={store.linkParts}
+            onRemoveFromGroup={store.removeFromGroup}
+            onReorder={store.reorderPart}
+            onReorderGroup={store.reorderGroup}
             rowActions={rowActions}
           />
         ) : (
