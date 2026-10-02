@@ -1,14 +1,11 @@
 // Self-check for the derived values the screens are built on: `npm run check`.
 import assert from 'node:assert/strict';
 import {
-  BATCH_THRESHOLD,
-  STATUS_LABEL,
   assemblies,
   assemblyBadge,
   assemblyMembers,
   assemblyName,
   barHeight,
-  batchGroups,
   countByStatus,
   linkCandidates,
   nextStatus,
@@ -16,11 +13,9 @@ import {
   partRows,
   partsAt,
   partsDone,
-  partsWaitingOnYou,
   isSegmented,
   progressColor,
   progressPct,
-  recommendedGroup,
   siblings,
   sortByProgress,
   statusPills,
@@ -54,36 +49,18 @@ assert.deepEqual(
   ],
 );
 
-// —— batch groups are cross-build ——
-const groups = batchGroups(builds);
-assert.deepEqual(
-  groups.map((g) => [g.label, g.parts.length, g.actionable]),
-  [
-    ['SPRAY PRIMER', 5, true],
-    ['SANDING', 8, true],
-    ['GLUE UP', 5, true],
-    ['AIRBRUSH', 2, false], // 2 of 3 — not worth setting up yet
-  ],
-);
-assert.equal(groups[3].parts.length < BATCH_THRESHOLD, true);
-// Recommended = the setup that clears the most builds, not the biggest pile.
-assert.equal(recommendedGroup(groups)?.label, 'SPRAY PRIMER');
-assert.equal(recommendedGroup(groups)?.buildCount, 3);
-assert.equal(partsWaitingOnYou(groups), 20);
-
 // —— the donut: green only once a build reads as finishing ——
 // sword is 7 of 8 done (87.5%), beskar 18 of 26.
 assert.equal(progressColor(sword), 'var(--basil)');
 assert.equal(progressColor(beskar), 'var(--sea)');
 
-// —— pills: pipeline order, queued last, DONE only once a build is finishing ——
+// —— pills: build step order, DONE only once a build is finishing ——
 assert.deepEqual(
   statusPills(beskar).map((p) => [p.status, p.count]),
   [
-    ['printing', 2],
+    ['printing', 3],
     ['sanding', 3],
     ['priming', 2],
-    ['queued', 1],
   ],
 );
 assert.deepEqual(
@@ -92,11 +69,11 @@ assert.deepEqual(
 );
 assert.equal(Math.round(progressPct(pipboy)), 12);
 
-// —— the pipeline has no failure state; a broken part goes back to queued ——
-assert.equal(nextStatus('sanding'), 'priming');
-assert.equal(nextStatus('done'), 'done');
-assert.deepEqual(otherSteps('sanding'), ['queued', 'printing', 'priming', 'painting', 'assembling', 'done']);
-assert.deepEqual(otherSteps('done'), ['queued', 'printing', 'sanding', 'priming', 'painting', 'assembling']);
+// —— the pipeline has no failure state; a broken part can go back to Print ——
+assert.equal(nextStatus('sanding', beskar.steps), 'priming');
+assert.equal(nextStatus('done', beskar.steps), 'done');
+assert.deepEqual(otherSteps('sanding', beskar.steps), ['printing', 'priming', 'painting', 'assembling', 'done']);
+assert.deepEqual(otherSteps('done', beskar.steps), ['printing', 'sanding', 'priming', 'painting', 'assembling']);
 
 // —— assemblies: linking merges groups, unlinking never strands a lone member ——
 const state = seedState(now);
@@ -152,7 +129,7 @@ assert.deepEqual(
 );
 
 // Sorting can't scatter a group — the members are already inside one row.
-assert.equal(partRows(sortByProgress(partsOf(trio))).filter(isRun)[0].length, 3);
+assert.equal(partRows(sortByProgress(partsOf(trio), trio.builds[0].steps)).filter(isRun)[0].length, 3);
 
 // Filtering can leave one member visible. A run of one still carries its assembly:
 // the old rule pruned it because a bracket over a single part means nothing, but a
@@ -212,9 +189,9 @@ assert.ok(barHeight(3, 4, 20) < barHeight(3), 'the mini chart draws the same cou
 assert.equal(partRows(partsOf(trio)).slice(0, 2).flat().length, 4);
 
 // —— the link badge ——
-const drifted = workshop.moveTo(trio, pauldronR.id, 'queued');
+const drifted = workshop.moveTo(trio, pauldronR.id, 'printing');
 const dParts = partsOf(drifted);
-const badgeOf = (p: Part, all: Part[]) => assemblyBadge(p, siblings(p, assemblies(all)));
+const badgeOf = (p: Part, all: Part[]) => assemblyBadge(p, siblings(p, assemblies(all)), beskar.steps);
 
 // Not in an assembly, no badge.
 assert.equal(badgeOf(dParts[5], dParts), null);
@@ -222,7 +199,7 @@ assert.equal(badgeOf(dParts[5], dParts), null);
 // A sibling that has fallen behind is named, with the step to catch up to.
 const behind = badgeOf(dParts[0], dParts);
 assert.equal(behind?.inStep, false);
-assert.equal(behind?.title.includes(`${pauldronR.name} (${STATUS_LABEL.queued})`), true);
+assert.equal(behind?.title.includes(`${pauldronR.name} (Print)`), true);
 
 // Members on the same step: named, no catch-up.
 const aligned = partsOf(
@@ -265,9 +242,8 @@ assert.deepEqual(partsAt(beskar.parts, 'done').length, partsDone(beskar));
 assert.deepEqual(partsAt(sword.parts, 'queued'), []);
 
 // A status as a heading, next to the shouted form the pills use.
-assert.equal(stepName('queued'), 'Queued');
-assert.equal(stepName('assembling'), 'Assembling');
-assert.equal(STATUS_LABEL.assembling, 'ASSEMBLING');
+assert.equal(stepName('printing', beskar.steps), 'Print');
+assert.equal(stepName('assembling', beskar.steps), 'Assemble');
 
 // —— a build's photo and note ——
 // Both are optional and replaceable; neither existed before ADR-0006.
@@ -336,6 +312,48 @@ assert.deepEqual(ids(workshop.reorderGroup(grouped, groupId, third, false)).slic
 // A group dropped on one of its own members, or on nothing, doesn't move.
 assert.deepEqual(ids(workshop.reorderGroup(grouped, groupId, second, true)), ids(grouped));
 assert.deepEqual(ids(workshop.reorderGroup(grouped, groupId, 'gone', true)), ids(grouped));
+
+// —— a drop changes membership and hand order together ——
+const drop = (source: workshop.PartDrop['source'], target: workshop.PartDrop['target'],
+  before = true, joins = true, reorder = true): workshop.PartDrop => ({ source, target, before, joins, reorder });
+const part = (id: string): workshop.PartDrop['source'] => ({ kind: 'part', id });
+const group = (id: string): workshop.PartDrop['source'] => ({ kind: 'group', id });
+const left = workshop.nameAssembly(workshop.linkParts(state, [first, second]), first, 'Left arm');
+const both = workshop.nameAssembly(workshop.linkParts(left, [third, fourth]), third, 'Right arm');
+const rightId = groupOf(both, third)!;
+const beforeDrop = structuredClone(both);
+const transferred = workshop.dropParts(both, drop(part(first), part(fourth)));
+assert.deepEqual(ids(transferred).slice(0, 4), [second, third, first, fourth]);
+assert.equal(groupOf(transferred, first), rightId);
+assert.equal(groupOf(transferred, second), undefined, 'the old singleton is pruned');
+assert.equal(partsOf(transferred).find(p => p.id === second)?.linkGroupName, undefined);
+assert.equal(partsOf(transferred).find(p => p.id === first)?.linkGroupName, 'Right arm');
+assert.equal(partsOf(transferred).find(p => p.id === first)?.status, partsOf(both)[0].status);
+assert.deepEqual(both, beforeDrop, 'drops do not mutate their input');
+
+// Progress allows membership changes but leaves the stored order alone.
+const progressDrop = workshop.dropParts(both, drop(part(first), group(rightId), false, true, false));
+assert.deepEqual(ids(progressDrop), ids(both));
+assert.equal(groupOf(progressDrop, first), rightId);
+// Beside an assembly means leaving, not joining. Its whole membership supplies the anchor.
+const beside = workshop.dropParts(both, drop(part(first), group(rightId), false, false));
+assert.deepEqual(ids(beside).slice(0, 4), [second, third, fourth, first]);
+assert.equal(groupOf(beside, first), undefined);
+assert.equal(groupOf(beside, third), rightId);
+
+// Moving an assembly never merges it into the target assembly.
+const leftId = groupOf(both, first)!;
+const assemblyDrop = workshop.dropParts(both, drop(group(leftId), group(rightId), false));
+assert.deepEqual(ids(assemblyDrop).slice(0, 4), [third, fourth, first, second]);
+assert.equal(groupOf(assemblyDrop, first), leftId);
+assert.equal(groupOf(assemblyDrop, third), rightId);
+assert.equal(workshop.dropParts(both, drop(group(leftId), part(third), false, true, false)), both);
+// Invalid or self-targeted drops cannot partially unlink a part.
+for (const target of [part(first), part('gone'), part(state.builds[1].parts[0].id), group('gone')]) {
+  assert.equal(workshop.dropParts(both, drop(part(first), target)), both);
+}
+assert.equal(workshop.dropParts(both, drop(group(leftId), part(first))), both);
+assert.equal(workshop.dropParts(both, drop(part('gone'), part(third))), both);
 
 // —— stamps ——
 const ago = (ms: number) => new Date(now - ms).toISOString();

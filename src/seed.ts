@@ -1,3 +1,4 @@
+import { defaultSteps } from './derive.ts';
 import type { Build, Part, PartStatus, State, ToolboxEntry } from './types.ts';
 
 const MIN = 60_000;
@@ -6,7 +7,7 @@ const DAY = 24 * HOUR;
 
 /**
  * Mock workshop, seeded relative to first load so "14m ago" reads right.
- * Numbers match the handoff: 62 parts, 31 done, and batch groups of 5/8/5/2.
+ * 62 parts, 31 done. Formerly queued parts now start at Print.
  */
 export function seedState(now = Date.now()): State {
   const ago = (ms: number) => new Date(now - ms).toISOString();
@@ -21,6 +22,7 @@ export function seedState(now = Date.now()): State {
     id,
     name,
     startedAt,
+    steps: defaultSteps(),
     parts: parts.map(
       ([partName, status, agoMs]): Part => ({
         id: `p${++seq}`,
@@ -44,7 +46,7 @@ export function seedState(now = Date.now()): State {
         ['Vambrace, right', 'sanding', 26 * HOUR],
         ['Knee, right', 'printing', 14 * MIN],
         ['Cod piece', 'printing', 40 * MIN],
-        ['Gauntlet, left', 'queued', 3 * DAY],
+        ['Gauntlet, left', 'printing', 3 * DAY],
         ['Helmet dome', 'done', 68 * DAY],
         ['Chest plate', 'done', 66 * DAY],
         ['Belt buckle', 'sanding', 5 * HOUR],
@@ -76,8 +78,8 @@ export function seedState(now = Date.now()): State {
         ['Brow plate', 'painting', 6 * HOUR],
         ['Cheek plate L', 'priming', 8 * HOUR],
         ['Cheek plate R', 'priming', 9 * HOUR],
-        ['Antenna mount', 'queued', 3 * DAY],
-        ['Rangefinder stalk', 'queued', 4 * DAY],
+        ['Antenna mount', 'printing', 3 * DAY],
+        ['Rangefinder stalk', 'printing', 4 * DAY],
         ...done(['Dome shell', 'Visor frame', 'Ear cap L', 'Ear cap R'], 30 * DAY),
       ]),
       build('b3', 'Energy Sword Prop', ago(55 * DAY), [
@@ -99,10 +101,10 @@ export function seedState(now = Date.now()): State {
         ['Switch bank', 'assembling', 7 * DAY],
         ['Battery cover', 'assembling', 8 * DAY],
         ['Cable guard', 'assembling', 9 * DAY],
-        ['Screen lens', 'queued', 10 * DAY],
-        ['Strap buckle', 'queued', 10 * DAY],
-        ['Side panel L', 'queued', 11 * DAY],
-        ['Side panel R', 'queued', 11 * DAY],
+        ['Screen lens', 'printing', 10 * DAY],
+        ['Strap buckle', 'printing', 10 * DAY],
+        ['Side panel L', 'printing', 11 * DAY],
+        ['Side panel R', 'printing', 11 * DAY],
         ...done(['Cuff base', 'Hinge pin'], 12 * DAY),
       ]),
     ],

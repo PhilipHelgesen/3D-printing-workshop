@@ -1,56 +1,55 @@
-import type { Build, Part, PartStatus } from './types.ts';
+import type { Build, Part, PartStatus, Step, StepColor } from './types.ts';
 
-export const PIPELINE: PartStatus[] = [
-  'queued',
-  'printing',
-  'sanding',
-  'priming',
-  'painting',
-  'assembling',
-  'done',
+/** Work colors come from the app palette; basil is reserved for Done. */
+export const STEP_COLORS: { id: Exclude<StepColor, 'basil'>; name: string }[] = [
+  { id: 'sea', name: 'Teal' },
+  { id: 'neutral', name: 'Sand' },
+  { id: 'olive', name: 'Olive' },
+  { id: 'lemon', name: 'Gold' },
+  { id: 'indigo', name: 'Blue' },
+  { id: 'stone', name: 'Stone' },
+  { id: 'terra', name: 'Clay' },
+  { id: 'rose', name: 'Rose' },
+  { id: 'violet', name: 'Violet' },
+  { id: 'apricot', name: 'Apricot' },
 ];
 
-export const STATUS_LABEL: Record<PartStatus, string> = {
-  queued: 'QUEUED',
-  printing: 'PRINTING',
-  sanding: 'SANDING',
-  priming: 'PRIMING',
-  painting: 'PAINTING',
-  assembling: 'ASSEMBLING',
-  done: 'DONE',
+export const DONE_STEP: Step = { id: 'done', name: 'Done', color: 'basil' };
+export const defaultSteps = (): Step[] => [
+  { id: 'printing', name: 'Print', color: 'sea' },
+  { id: 'sanding', name: 'Sand', color: 'neutral' },
+  { id: 'priming', name: 'Prime', color: 'olive' },
+  { id: 'painting', name: 'Paint', color: 'lemon' },
+  { id: 'assembling', name: 'Assemble', color: 'indigo' },
+  { ...DONE_STEP },
+];
+
+/** Reject invalid stored or edited workflows before parts can refer to them. */
+export function validateSteps(steps: Step[]): void {
+  if (!Array.isArray(steps) || steps.length < 2 ||
+      steps.at(-1)?.id !== 'done' ||
+      new Set(steps.map((step) => step.id)).size !== steps.length) {
+    throw new Error('Keep at least one work step and Done fixed at the end.');
+  }
+  for (const step of steps) {
+    if (typeof step.id !== 'string' || !step.id.trim() ||
+        typeof step.name !== 'string' || !step.name.trim() ||
+        (step.id === 'done'
+          ? step.name !== DONE_STEP.name || step.color !== DONE_STEP.color
+          : !STEP_COLORS.some((color) => color.id === step.color))) {
+      throw new Error('Each work step needs a name and a palette color. Done stays unchanged.');
+    }
+  }
+}
+
+export const stepName = (status: PartStatus, steps: Step[]): string =>
+  steps.find((step) => step.id === status)?.name ?? status;
+
+export const stepTokens = (status: PartStatus, steps: Step[]) => {
+  const color = steps.find((step) => step.id === status)?.color ?? 'stone';
+  return { solid: `var(--${color})`, tint: `var(--${color}-tint)` };
 };
 
-/** Pill / dot / bar colors, keyed by status. */
-export const STATUS_TOKENS: Record<PartStatus, { tint: string; solid: string }> = {
-  queued: { tint: 'var(--stone-tint)', solid: 'var(--stone)' },
-  printing: { tint: 'var(--sea-tint)', solid: 'var(--sea)' },
-  sanding: { tint: 'var(--neutral-tint)', solid: 'var(--neutral)' },
-  priming: { tint: 'var(--olive-tint)', solid: 'var(--olive)' },
-  painting: { tint: 'var(--lemon-tint)', solid: 'var(--lemon)' },
-  assembling: { tint: 'var(--indigo-tint)', solid: 'var(--indigo)' },
-  done: { tint: 'var(--basil-tint)', solid: 'var(--basil)' },
-};
-
-/** Stage flow columns on the build detail header (pipeline order, DONE widest). */
-export const STAGES: { status: PartStatus; label: string }[] = [
-  { status: 'queued', label: 'QUEUE' },
-  { status: 'printing', label: 'PRINT' },
-  { status: 'sanding', label: 'SAND' },
-  { status: 'priming', label: 'PRIME' },
-  { status: 'painting', label: 'PAINT' },
-  { status: 'assembling', label: 'ASSY' },
-  { status: 'done', label: 'DONE' },
-];
-
-/** The manual operations a batch session can be set up for. */
-export const STATIONS: { status: PartStatus; label: string; noun: string }[] = [
-  { status: 'priming', label: 'SPRAY PRIMER', noun: 'primer' },
-  { status: 'sanding', label: 'SANDING', noun: 'sanding' },
-  { status: 'assembling', label: 'GLUE UP', noun: 'glue-up' },
-  { status: 'painting', label: 'AIRBRUSH', noun: 'paint' },
-];
-
-export const BATCH_THRESHOLD = 3;
 /** At or above this share of parts done, a build reads as finishing. */
 export const NEARLY_DONE = 0.85;
 
@@ -82,75 +81,24 @@ export const partsAt = (parts: Part[], status: PartStatus) =>
 export const countByStatus = (parts: Part[], status: PartStatus) =>
   partsAt(parts, status).length;
 
-/** A status as a heading reads: QUEUED → Queued. `STATUS_LABEL` is the shouted form. */
-export const stepName = (status: PartStatus) =>
-  STATUS_LABEL[status].charAt(0) + STATUS_LABEL[status].slice(1).toLowerCase();
-
-/**
- * Pills shown on a build card: non-zero counts, pipeline order with queued last.
- * DONE is only worth a pill once the build is finishing — otherwise the donut says it.
- */
+/** Non-empty steps in the build's order. The donut already reports Done below 85%. */
 export function statusPills(b: Build): { status: PartStatus; count: number }[] {
-  const order: PartStatus[] = [
-    'printing',
-    'sanding',
-    'priming',
-    'painting',
-    'assembling',
-    'done',
-    'queued',
-  ];
-  return order
-    .filter((s) => s !== 'done' || progressPct(b) >= NEARLY_DONE * 100)
-    .map((status) => ({ status, count: countByStatus(b.parts, status) }))
-    .filter((p) => p.count > 0);
+  return b.steps
+    .filter((step) => step.id !== 'done' || progressPct(b) >= NEARLY_DONE * 100)
+    .map((step) => ({ status: step.id, count: countByStatus(b.parts, step.id) }))
+    .filter((pill) => pill.count > 0);
 }
 
 /** Donut color: basil once a build reads as finishing, sea until then. */
 export const progressColor = (b: Build) =>
   progressPct(b) >= NEARLY_DONE * 100 ? 'var(--basil)' : 'var(--sea)';
 
-export const nextStatus = (s: PartStatus): PartStatus =>
-  PIPELINE[Math.min(PIPELINE.indexOf(s) + 1, PIPELINE.length - 1)];
+export const nextStatus = (s: PartStatus, steps: Step[]): PartStatus =>
+  steps[Math.min(steps.findIndex((step) => step.id === s) + 1, steps.length - 1)].id;
 
 /** Steps offered by the Advance ▾ menu: every other step, in pipeline order — rework can jump either way. */
-export const otherSteps = (s: PartStatus): PartStatus[] => PIPELINE.filter((status) => status !== s);
-
-export interface BatchGroup {
-  status: PartStatus;
-  label: string;
-  noun: string;
-  parts: Part[];
-  buildCount: number;
-  actionable: boolean;
-}
-
-/**
- * Cross-build: every part whose next operation is the same station. A group is
- * only worth setting up at BATCH_THRESHOLD parts. Recommended group first — the
- * one clearing the most builds in one setup, count breaking ties.
- */
-export function batchGroups(builds: Build[]): BatchGroup[] {
-  const groups = STATIONS.map((station) => {
-    const parts = builds.flatMap((b) => b.parts.filter((p) => p.status === station.status));
-    return {
-      ...station,
-      parts,
-      buildCount: new Set(parts.map((p) => p.buildId)).size,
-      actionable: parts.length >= BATCH_THRESHOLD,
-    };
-  });
-  const rank = (g: BatchGroup) =>
-    g.actionable ? g.buildCount * 1000 + g.parts.length : g.parts.length;
-  return groups.sort((a, b) => rank(b) - rank(a));
-}
-
-export const recommendedGroup = (groups: BatchGroup[]) =>
-  groups[0]?.actionable ? groups[0] : null;
-
-/** Parts the maker has to pick up and do something with, across all builds. */
-export const partsWaitingOnYou = (groups: BatchGroup[]) =>
-  groups.reduce((n, g) => n + g.parts.length, 0);
+export const otherSteps = (s: PartStatus, steps: Step[]): PartStatus[] =>
+  steps.filter((step) => step.id !== s).map((step) => step.id);
 
 // ——— formatting ———
 
@@ -191,9 +139,10 @@ export function assemblies(parts: Part[]): Map<string, Part[]> {
 export const siblings = (part: Part, byGroup: Map<string, Part[]>): Part[] =>
   part.linkGroupId ? (byGroup.get(part.linkGroupId) ?? []).filter((p) => p.id !== part.id) : [];
 
-/** Queued first, done last — how far each part has come through the pipeline. */
-export const sortByProgress = (parts: Part[]): Part[] =>
-  [...parts].sort((a, b) => PIPELINE.indexOf(a.status) - PIPELINE.indexOf(b.status));
+/** Build order, Done last. */
+export const sortByProgress = (parts: Part[], steps: Step[]): Part[] =>
+  [...parts].sort((a, b) => steps.findIndex((step) => step.id === a.status) -
+    steps.findIndex((step) => step.id === b.status));
 
 /**
  * The rows a parts list should render: either a single part, or the run of parts
@@ -237,12 +186,12 @@ export interface AssemblyBadge {
  * The link badge on a part, or `null` when it belongs to no assembly. Members
  * *should* sit on the same step; the badge reports drift rather than preventing it.
  */
-export function assemblyBadge(part: Part, links: Part[]): AssemblyBadge | null {
+export function assemblyBadge(part: Part, links: Part[], steps: Step[]): AssemblyBadge | null {
   if (!links.length) return null;
   const names = links.map((l) => l.name).join(', ');
   const behind = links.filter((l) => l.status !== part.status);
   if (!behind.length) return { title: `Linked to ${names} — same step`, inStep: true };
-  const detail = behind.map((l) => `${l.name} (${STATUS_LABEL[l.status]})`).join(', ');
+  const detail = behind.map((l) => `${l.name} (${stepName(l.status, steps)})`).join(', ');
   return { title: `Linked to ${names} — catch up: ${detail}`, inStep: false };
 }
 

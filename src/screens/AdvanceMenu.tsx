@@ -1,5 +1,6 @@
-import type { Part, PartStatus } from '../types.ts';
-import { STATUS_TOKENS, nextStatus, otherSteps, stepName } from '../derive.ts';
+import type { CSSProperties } from 'react';
+import type { Part, PartStatus, Step } from '../types.ts';
+import { stepTokens, nextStatus, otherSteps, stepName } from '../derive.ts';
 import s from './build.module.css';
 
 export interface PartActions {
@@ -10,44 +11,35 @@ export interface PartActions {
   onLink: (id: string) => void;
 }
 
-/**
- * Where the menu hangs from. It isn't in the DOM until it opens, so its opener
- * measures the space at the click — while its own place on screen is known.
- * ponytail: the height holds while the menu's items are fixed; measure on open
- * if it ever grows a variable section.
- */
-const MENU_WIDTH = 268;
-const MENU_HEIGHT = 384;
-
-/**
- * The classes that hang the menu off a corner with room, decided at the click.
- * An opener wider than the menu keeps the right edge; a narrower one — a tile —
- * takes the left, unless the window ends first. Measured rather than told which
- * kind of opener it is, so a third one needs no edit here.
- */
-export const menuPlace = (el: Element): string => {
+/** Fit variable-length workflows inside the viewport, with scrolling for long menus. */
+export const menuPlace = (el: Element, stepCount: number): CSSProperties => {
   const box = el.getBoundingClientRect();
-  const left = box.width < MENU_WIDTH && box.left + MENU_WIDTH <= window.innerWidth;
-  const up = box.bottom + MENU_HEIGHT > window.innerHeight;
-  return `${up ? s.menuUp : ''} ${left ? s.menuLeft : ''}`;
+  const width = Math.min(268, window.innerWidth - 24);
+  const height = Math.min(32 * (stepCount - 1) + 184, window.innerHeight - 24);
+  return {
+    width,
+    left: Math.max(12, Math.min(box.width < width ? box.left : box.right - width, window.innerWidth - width - 12)),
+    top: Math.max(12, Math.min(box.bottom + 4, window.innerHeight - height - 12)),
+    maxHeight: window.innerHeight - 24,
+    overflowY: 'auto',
+  };
 };
-
-const stepLabel = (status: PartStatus) =>
-  status === 'queued' ? 'Back to queue' : stepName(status);
 
 /** Every step a part can move to, then the things you can do to the part itself. */
 export function AdvanceMenu({
   part,
+  steps,
   links,
   place,
   actions,
   onClose,
 }: {
   part: Part;
+  steps: Step[];
   /** The rest of this part's assembly — the count on the link item. */
   links: Part[];
-  /** Corner classes from `menuPlace`, measured when the opener was clicked. */
-  place: string;
+  /** Viewport position from `menuPlace`, measured when the opener was clicked. */
+  place: CSSProperties;
   actions: PartActions;
   onClose: () => void;
 }) {
@@ -58,20 +50,21 @@ export function AdvanceMenu({
 
   return (
     <div
-      className={`${s.menu} ${place}`}
+      className={s.menu}
+      style={place}
       onClick={(e) => e.stopPropagation()}
     >
       <div className={s.menuKicker}>MOVE TO STEP</div>
-      {otherSteps(part.status).map((status) => {
-        const isNext = status === nextStatus(part.status);
+      {otherSteps(part.status, steps).map((status) => {
+        const isNext = status === nextStatus(part.status, steps);
         return (
           <button
             key={status}
             className={`${s.menuItem} ${isNext ? s.menuNext : ''}`}
             onClick={pick(() => actions.onMove(part.id, status))}
           >
-            <span className={s.menuDot} style={{ background: STATUS_TOKENS[status].solid }} />
-            {stepLabel(status)}
+            <span className={s.menuDot} style={{ background: stepTokens(status, steps).solid }} />
+            {stepName(status, steps)}
             {isNext && <span className={s.menuTag}>next</span>}
           </button>
         );

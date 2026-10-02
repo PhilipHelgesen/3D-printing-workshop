@@ -10,6 +10,7 @@
 
 .dialog {
   width: 460px;
+  max-width: calc(100vw - 24px);
   max-height: 92vh;
   overflow-y: auto;
   background: var(--surface);
@@ -345,4 +346,15 @@
   border-radius: var(--radius-chip);
   padding: 11px 22px;
   cursor: pointer;
+}
+
+.wide {
+  width: 800px;
+}
+
+.delete:disabled,
+.cancel:disabled,
+.destroy:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

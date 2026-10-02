@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import type { Part } from '../types.ts';
-import { STATUS_TOKENS, assemblyBadge, timeAgo } from '../derive.ts';
+import type { Part, Step } from '../types.ts';
+import { stepTokens, assemblyBadge, timeAgo } from '../derive.ts';
 import { AdvanceMenu, LinkIcon, menuPlace, type PartActions } from './AdvanceMenu.tsx';
 import { StatusPill } from '../ui/StatusPill.tsx';
 import s from './build.module.css';
@@ -25,6 +25,7 @@ function DropHalves({ id }: { id: string }) {
 /** A part as a line of detail: its note, its step, when it last moved. */
 export function PartRow({
   part,
+  steps,
   links,
   menuOpen,
   onOpenMenu,
@@ -32,6 +33,7 @@ export function PartRow({
   overlay = false,
 }: {
   part: Part;
+  steps: Step[];
   /** The rest of this part's assembly, if any. */
   links: Part[];
   menuOpen: boolean;
@@ -45,8 +47,8 @@ export function PartRow({
   overlay?: boolean;
 }) {
   const isDone = part.status === 'done';
-  const badge = assemblyBadge(part, links);
-  const [place, setPlace] = useState('');
+  const badge = assemblyBadge(part, links, steps);
+  const [place, setPlace] = useState<CSSProperties>({});
   const drag = useDraggable({ id: part.id, data: { kind: 'part' }, disabled: overlay });
 
   return (
@@ -54,7 +56,7 @@ export function PartRow({
       ref={overlay ? undefined : drag.setNodeRef}
       data-part={overlay ? undefined : part.id}
       className={s.row}
-      style={{ borderLeftColor: STATUS_TOKENS[part.status].solid }}
+      style={{ borderLeftColor: stepTokens(part.status, steps).solid }}
       {...(overlay ? {} : drag.listeners)}
       {...(overlay ? {} : drag.attributes)}
     >
@@ -77,7 +79,7 @@ export function PartRow({
         {part.note && <span className={s.partNote}>{part.note}</span>}
       </div>
 
-      <StatusPill status={part.status} />
+      <StatusPill status={part.status} steps={steps} />
       {!overlay && (
         <>
           <span className={s.stamp}>{timeAgo(part.updatedAt)}</span>
@@ -86,7 +88,7 @@ export function PartRow({
             aria-expanded={menuOpen}
             onClick={(e) => {
               // The menu hangs off the row, not off this button, so the row is what's measured.
-              if (!menuOpen) setPlace(menuPlace(e.currentTarget.parentElement!));
+              if (!menuOpen) setPlace(menuPlace(e.currentTarget.parentElement!, steps.length));
               e.stopPropagation();
               onOpenMenu(menuOpen ? null : part.id);
             }}
@@ -99,6 +101,7 @@ export function PartRow({
       {menuOpen && !overlay && (
         <AdvanceMenu
           part={part}
+          steps={steps}
           links={links}
           place={place}
           actions={actions}

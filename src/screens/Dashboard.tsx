@@ -1,12 +1,9 @@
 import type { Build, Screen } from '../types.ts';
 import {
-  batchGroups,
   buildUpdatedAt,
   partsDone,
-  partsWaitingOnYou,
   progressColor,
   progressPct,
-  recommendedGroup,
   statusPills,
   timeAgo,
 } from '../derive.ts';
@@ -14,9 +11,6 @@ import { Illustration, LeftRail } from '../ui/Shell.tsx';
 import { StatusPill } from '../ui/StatusPill.tsx';
 import ui from '../ui/ui.module.css';
 import s from './dashboard.module.css';
-
-const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
-const word = (n: number) => WORDS[n] ?? String(n);
 
 export function Dashboard({
   builds,
@@ -29,8 +23,6 @@ export function Dashboard({
   onOpenBuild: (id: string) => void;
   onNewBuild: () => void;
 }) {
-  const groups = batchGroups(builds);
-  const recommended = recommendedGroup(groups);
   const totalParts = builds.reduce((n, b) => n + b.parts.length, 0);
   const totalDone = builds.reduce((n, b) => n + partsDone(b), 0);
 
@@ -45,7 +37,7 @@ export function Dashboard({
             <div className={ui.railCopy}>
               {builds.length} builds on the bench,
               <br />
-              {partsWaitingOnYou(groups)} parts waiting on you
+              {totalParts - totalDone} parts still in progress
             </div>
             <button className={ui.btnFill} onClick={onNewBuild}>
               + New build
@@ -58,11 +50,6 @@ export function Dashboard({
         <div className={s.hero}>
           <div>
             <div className={s.greeting}>Hello, Philip!</div>
-            <div className={s.heroSub}>
-              {recommended
-                ? `${recommended.parts.length} parts are ready for ${recommended.noun} — one setup clears ${word(recommended.buildCount)} ${recommended.buildCount === 1 ? 'build' : 'builds'}.`
-                : 'Nothing is stacked up enough to batch yet.'}
-            </div>
             <div className={s.heroFigure}>
               {totalDone}
               <span> / {totalParts} parts done</span>
@@ -98,7 +85,7 @@ export function Dashboard({
               </div>
               <div className={s.pills}>
                 {statusPills(b).map((p) => (
-                  <StatusPill key={p.status} status={p.status} count={p.count} />
+                  <StatusPill key={p.status} status={p.status} steps={b.steps} count={p.count} />
                 ))}
               </div>
             </button>

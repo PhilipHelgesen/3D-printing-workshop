@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import type { Part } from '../types.ts';
-import { STATUS_LABEL, STATUS_TOKENS } from '../derive.ts';
+import type { Part, Step } from '../types.ts';
+import { stepName, stepTokens } from '../derive.ts';
 import { Modal } from '../ui/Modal.tsx';
 import s from '../ui/modal.module.css';
 
 export function LinkPartModal({
   part,
+  steps,
   members,
   candidates,
   onAdd,
@@ -13,6 +14,7 @@ export function LinkPartModal({
   onClose,
 }: {
   part: Part;
+  steps: Step[];
   /** Other parts already in this assembly. */
   members: Part[];
   /** Other parts in the build not yet in this assembly. */
@@ -53,7 +55,7 @@ export function LinkPartModal({
           <div className={s.linkList}>
             {members.map((m) => (
               <div key={m.id} className={s.linkedRow}>
-                <span className={s.linkedDot} style={{ background: STATUS_TOKENS[m.status].solid }} />
+                <span className={s.linkedDot} style={{ background: stepTokens(m.status, steps).solid }} />
                 <span className={s.linkedName}>{m.name}</span>
                 <button className={s.unlink} onClick={() => onRemoveMember(m.id)}>
                   Remove
@@ -81,7 +83,7 @@ export function LinkPartModal({
             >
               <span className={`${s.linkCheck} ${isSelected ? s.linkCheckOn : ''}`} />
               <span className={s.linkOptionName}>{c.name}</span>
-              <span className={s.linkOptionStatus}>{STATUS_LABEL[c.status]}</span>
+              <span className={s.linkOptionStatus}>{stepName(c.status, steps)}</span>
             </button>
           );
         })}

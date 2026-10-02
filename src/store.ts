@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { PartStatus, State, ToolboxEntry } from './types.ts';
+import type { PartStatus, State, Step, ToolboxEntry } from './types.ts';
 import { normalizeState, parseStored, shouldSkipPush } from './persist.ts';
 import { seedState } from './seed.ts';
 import { ROW_ID, supabase } from './supabase.ts';
@@ -89,16 +89,15 @@ export function useStore() {
   const actions = useMemo(
     () => ({
       moveTo: (id: string, status: PartStatus) => setState((s) => workshop.moveTo(s, id, status)),
+      saveSteps: (buildId: string, steps: Step[], replacements: Record<string, string>) =>
+        setState((s) => workshop.saveSteps(s, buildId, steps, replacements)),
       addPart: (buildId: string, name: string, note?: string) =>
         setState((s) => workshop.addPart(s, buildId, name, note)),
       renamePart: (id: string, name: string) => setState((s) => workshop.renamePart(s, id, name)),
       setNote: (id: string, note: string) => setState((s) => workshop.setNote(s, id, note)),
       deletePart: (id: string) => setState((s) => workshop.deletePart(s, id)),
       linkParts: (ids: string[]) => setState((s) => workshop.linkParts(s, ids)),
-      reorderPart: (id: string, targetId: string, before: boolean) =>
-        setState((s) => workshop.reorderPart(s, id, targetId, before)),
-      reorderGroup: (groupId: string, targetId: string, before: boolean) =>
-        setState((s) => workshop.reorderGroup(s, groupId, targetId, before)),
+      dropParts: (drop: workshop.PartDrop) => setState((s) => workshop.dropParts(s, drop)),
       nameAssembly: (id: string, name: string) =>
         setState((s) => workshop.nameAssembly(s, id, name)),
       removeFromGroup: (id: string) => setState((s) => workshop.removeFromGroup(s, id)),

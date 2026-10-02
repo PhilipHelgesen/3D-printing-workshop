@@ -22,9 +22,16 @@
   --indigo-tint: #cfdcee;
   --terra: #84572f;
   --terra-dark: #6d4526;
+  --terra-tint: #ead5c3;
+  --rose: #b66770;
+  --rose-tint: #f2d4d8;
+  --violet: #80639c;
+  --violet-tint: #e3d8ef;
+  --apricot: #b97732;
+  --apricot-tint: #f6dfc1;
   --neutral: #a08a72; /* sanding — warm dust */
   --neutral-tint: #edd5c0;
-  --stone: #8e8579; /* queued — greyer and flatter than sanding: nothing has happened yet */
+  --stone: #8e8579; /* stone — a neutral work-step option */
   --stone-tint: #e4ded5;
   --olive: #7f7a35; /* priming — the cooler half of the yellow pair, painting keeps lemon */
   --olive-tint: #e6e4c0;

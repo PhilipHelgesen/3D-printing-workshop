@@ -1,9 +1,8 @@
 # Nozzle — orientation for an AI working on this repo
 
 A workshop tracker for one maker running several 3D-print builds at once. Its job
-is to hold the state of every part so the maker doesn't have to, and to make
-**batching** easy — doing the same operation (prime, sand, glue) on parts from
-several builds in one setup.
+is to hold the state of every part so the maker doesn't have to. Each build
+owns its work steps.
 
 Live: <https://3-d-printing-workshop.vercel.app> · Repo: `PhilipHelgesen/3D-printing-workshop`
 
@@ -21,7 +20,7 @@ the things the code alone doesn't tell you.
 | Styling | CSS variables + CSS Modules | no Tailwind, no CSS-in-JS, no UI library |
 | Data | Supabase (Postgres + Storage) | one row of JSON, see below |
 | Hosting | Vercel | auto-deploys `main` |
-| Tests | one assert script | `npm run check`, no framework |
+| Tests | assert scripts | `npm run check`, no framework |
 
 **No router, no state library, no component library.** Three screens don't justify
 them. Don't add any without asking.
@@ -31,6 +30,7 @@ them. Don't add any without asking.
 ```bash
 npm run dev      # Vite dev server on :5173
 npm run check    # runs the check files — after touching derive.ts, workshop.ts or persist.ts
+npm run check:drag # real pointer checks in Chrome; CHROME_BIN can select Chromium
 npm run build    # tsc -b && vite build — must pass before pushing
 ```
 
@@ -47,7 +47,7 @@ Layered so the rules can be read and tested without React:
 ```
 types.ts        the data model, and nothing else
    ↑
-derive.ts       pure read-side: progress, batch groups, part rows, formatting
+derive.ts       pure read-side: progress, step display, part rows, formatting
 workshop.ts     pure write-side: (state, args) => state for every mutation
    ↑
 store.ts        React glue — useState + localStorage + Supabase sync
@@ -70,7 +70,7 @@ store's action object, one assert in `derive.check.ts`, then the UI.
 
 - `types.ts` — `Part`, `Build`, `ToolboxEntry`, `State`, `Screen`.
 - `derive.ts` — everything computed, never stored: `progressPct`, `statusPills`,
-  `batchGroups`, `partRows`, `assemblyBadge`, `timeAgo`, …
+  `stepName`, `stepTokens`, `partRows`, `assemblyBadge`, `timeAgo`, …
 - `workshop.ts` — `moveTo`, `addPart`, `linkParts`, `saveEntry`, …
   Pure apart from `crypto.randomUUID()` / `new Date()`.
 - `persist.ts` — the workshop copy's decisions, pure: `normalizeState`,
@@ -79,8 +79,8 @@ store's action object, one assert in `derive.check.ts`, then the UI.
 - `store.ts` — `useStore()`: state, persistence, and the bound action object.
 - `seed.ts` — the mock workshop used on first load, plus the built-in icon swatches.
 - `icons.ts` — downscales and uploads toolbox icons to Supabase Storage.
-- `derive.check.ts` / `persist.check.ts` — the whole test suite. Plain
-  `node:assert`; `npm run check` runs both.
+- `derive.check.ts` / `persist.check.ts` / `steps.check.ts` — the test suite. Plain
+  `node:assert`; `npm run check` runs all three.
 
 ---
 
@@ -147,15 +147,25 @@ server-side: this is a static SPA that talks to Supabase from the browser.
 
 These are product decisions, not accidents. Don't "fix" them.
 
-- **The pipeline is** `queued → printing → sanding → priming → painting → assembling → done`.
-- **There is no `failed` status.** A broken part goes back to `queued`. Never add
-  a failure state.
+- **A step** is work a part still needs. A part at Sand needs sanding; it has
+  not finished sanding. **Done** means the part is finished.
+- **Each build owns its ordered steps** (ADR-0007). New builds start with
+  Print → Sand → Prime → Paint → Assemble → Done. Repeated operations are
+  distinct steps, such as graphite after black gloss and graphite after clear
+  coat. Renaming, recoloring and reordering keep parts on their existing steps.
+- **Done stays fixed at the end**, green and uneditable. Each build retains at
+  least one work step. Queue is removed; legacy queued parts migrate to Print.
+  New parts start at the build's first work step.
+- **Deleting an occupied step requires a replacement** and shows the affected
+  count. All editor changes apply together on Save; Cancel or closing discards
+  them. The editor uses the same horizontal visualization as the build header.
+- **There is no `failed` status.** A broken part moves back to an appropriate
+  work step in its build.
 - **Any part can move to any step.** The Advance menu lists every other step —
   rework jumps backwards, and a part in assembling can go straight to painting.
 - **Parts advance one at a time.** There is no multi-select: no row checkbox, no
-  selection bar, no "advance them together". Batching is *advice* — the dashboard
-  names the group worth one setup — and the parts are then ticked off one by one
-  through each row's Advance menu. The square at the head of a row is a done
+  selection bar, no "advance them together". Parts move through each row's
+  Advance menu. The square at the head of a row is a done
   marker, not a control. `moveTo` takes a single part id; don't widen it back
   to a list. A tile opens the same menu a row does — it is not a one-click
   advance.
@@ -169,9 +179,9 @@ These are product decisions, not accidents. Don't "fix" them.
   list is one toggle away and is where notes, times and assemblies read; a
   bracket can't survive a grid reflow, so a tile carries the link badge only.
   Both open the same `AdvanceMenu`.
-- **Seven stages, seven colours.** `STATUS_TOKENS` used to map seven statuses
-  onto four tints, which is invisible in a list (the pill spells the stage out)
-  and fatal in tiles (the colour *is* the message). Don't collapse them again.
+- **Step colors come from the app palette.** Work steps use preset swatches;
+  Done reserves green. A build's chosen names, colors and order appear in the
+  header, tiles, rows, Advance menu, assembly displays and dashboard pills.
 - **There is no curing or "hands off" concept.** No cure timer, no print ETA, no
   part is ever unavailable — every part at a station is workable right now. The
   old `curingUntil` field was deleted along with everything that read it: it had
@@ -184,9 +194,8 @@ These are product decisions, not accidents. Don't "fix" them.
   is usually the model listing's render or a slicer screenshot, not a finished
   object — it has to be there while the work is. Model URLs and filament colour
   were considered and rejected: the maker doesn't want them.
-- **Batch groups are cross-build** and only actionable at **3+ parts**
-  (`BATCH_THRESHOLD`). The recommended group is the one clearing the most builds,
-  count breaking ties.
+- **The dashboard has no batching suggestion** (ADR-0007). The maker never
+  reads it. Custom operations do not need cross-build matching.
 - **The workshop copy** is the rule governing how the local copy and the cloud
   copy of the workshop agree: pull once, cloud wins if it has anything, later
   changes go to localStorage at once and to the cloud on a debounce, never
@@ -209,7 +218,13 @@ These are product decisions, not accidents. Don't "fix" them.
   and `assemblyBadge` hands a row its badge. Rows are built from the *visible*
   parts; a part's siblings are looked up across the *whole build*, so a badge
   survives its siblings being filtered out of view.
-- Everything derived (progress, counts, batch groups) is **computed, never stored**.
+- **Dragging a part between assemblies transfers only that part**, leaving its
+  old siblings behind. A drop applies membership, singleton cleanup and hand
+  order in one workshop change. Manual honors the drop position; Progress keeps
+  the stored order and applies only membership changes. Dragging a whole assembly
+  moves it without merging it into another assembly. Explicit linking still
+  merges assemblies.
+- Everything derived (progress, counts, step display) is **computed, never stored**.
 
 ---
 

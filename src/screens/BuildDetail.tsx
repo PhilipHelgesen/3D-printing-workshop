@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -13,16 +13,15 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import type { Build, Part, PartStatus, Screen } from '../types.ts';
+import type { Build, Part, PartStatus, Screen, Step } from '../types.ts';
+import type { PartDrop } from '../workshop.ts';
 import {
-  STAGES,
-  STATUS_TOKENS,
+  stepTokens,
   assemblies,
   assemblyName,
   barHeight,
   buildUpdatedAt,
   countByStatus,
-  isSegmented,
   partRows,
   partsAt,
   partsDone,
@@ -31,6 +30,7 @@ import {
   stepName,
   timeAgo,
 } from '../derive.ts';
+import { StageBar, StageFlow } from './StageFlow.tsx';
 import { PHOTO_EDGE, uploadImage } from '../icons.ts';
 import { LeftRail } from '../ui/Shell.tsx';
 import { PartRow } from './PartRow.tsx';
@@ -55,7 +55,7 @@ const DRAG_SLOP = 5;
 /** A drop, read off whichever target the pointer is over. */
 interface Aim {
   /** The part the drop is anchored to, or the assembly when it's a panel edge. */
-  anchor: { kind: 'row'; id: string } | { kind: 'panel'; groupId: string };
+  target: PartDrop['target'];
   before: boolean;
   /** Whether landing here also means joining the assembly under the pointer. */
   joins: boolean;
@@ -76,93 +76,24 @@ const nearest: CollisionDetection = (args) => {
 };
 
 /**
- * One stage's bar. Up to three parts it is drawn as that many pieces you can
- * count; past that the pieces stop being countable and it goes solid. The height
- * carries the count either way, which is what the two charts have in common.
- */
-function StageBar({ count, color, height }: { count: number; color: string; height: number }) {
-  const pieces = isSegmented(count) ? count : 1;
-  return (
-    <span className={s.stageBar} style={{ height }}>
-      {Array.from({ length: pieces }, (_, i) => (
-        <span key={i} className={s.stagePiece} style={{ background: color }} />
-      ))}
-    </span>
-  );
-}
-
-/** `empty` is the track colour, which has to stand off whatever the bar sits on. */
-const stageColor = (count: number, status: PartStatus, empty = 'var(--track)') =>
-  count === 0 ? empty : STATUS_TOKENS[status].solid;
-
-/**
- * The pipeline, and the way the page is filtered. The maker arrives having
- * already picked the operation he's set up for, so the counts are the control:
- * click SAND and the list below is the parts that need sanding (ADR-0006).
- */
-function StageFlow({
-  parts,
-  picked,
-  onPick,
-}: {
-  parts: Part[];
-  picked: PartStatus | null;
-  onPick: (status: PartStatus | null) => void;
-}) {
-  return (
-    <div className={s.flow}>
-      {STAGES.map((stage) => {
-        const count = countByStatus(parts, stage.status);
-        const empty = count === 0;
-        const on = picked === stage.status;
-        // An empty stage has nothing to filter to. A picked one stays live even at
-        // zero, so clearing the last part at a step doesn't strand the filter.
-        return (
-          <button
-            key={stage.status}
-            className={[
-              s.stage,
-              stage.status === 'done' ? s.stageWide : '',
-              on ? s.stageOn : '',
-              picked && !on ? s.stageDim : '',
-            ].join(' ')}
-            aria-pressed={on}
-            disabled={empty && !on}
-            onClick={() => onPick(on ? null : stage.status)}
-          >
-            <span className={`${s.stageCount} ${empty ? s.stageEmpty : ''}`}>{count}</span>
-            <StageBar
-              count={count}
-              color={stageColor(count, stage.status)}
-              height={barHeight(count)}
-            />
-            <span className={s.stageLabel}>{stage.label}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/**
  * The assembly's spread across the pipeline, at header scale: no counts, no
  * labels, the tooltip carries the breakdown. It reports the whole assembly, not
  * the slice filtering has left on screen — the head is about the assembly.
  */
-function MiniFlow({ members }: { members: Part[] }) {
-  const spread = STAGES.map((stage) => ({ ...stage, count: countByStatus(members, stage.status) }));
+function MiniFlow({ members, steps }: { members: Part[]; steps: Step[] }) {
+  const spread = steps.map((stage) => ({ ...stage, count: countByStatus(members, stage.id) }));
   const title = spread
     .filter((s) => s.count > 0)
-    .map((s) => `${s.count} ${stepName(s.status).toLowerCase()}`)
+    .map((s) => `${s.count} ${stepName(s.id, steps).toLowerCase()}`)
     .join(' · ');
 
   return (
     <span className={s.miniFlow} title={title}>
       {spread.map((stage) => (
-        <span key={stage.status} className={s.miniStage}>
+        <span key={stage.id} className={s.miniStage}>
           <StageBar
             count={stage.count}
-            color={stageColor(stage.count, stage.status, 'var(--border)')}
+            color={stage.count === 0 ? 'var(--border)' : stepTokens(stage.id, steps).solid}
             height={barHeight(stage.count, 4, 20)}
           />
         </span>
@@ -178,6 +109,7 @@ function MiniFlow({ members }: { members: Part[] }) {
  */
 function AssemblyHead({
   visible,
+  steps,
   all,
   collapsed,
   onToggle,
@@ -186,6 +118,7 @@ function AssemblyHead({
 }: {
   /** The members currently on screen; `all` is the assembly whole. */
   visible: Part[];
+  steps: Step[];
   all: Part[];
   collapsed: boolean;
   onToggle: () => void;
@@ -252,7 +185,7 @@ function AssemblyHead({
           }}
         />
       )}
-      <MiniFlow members={all} />
+      <MiniFlow members={all} steps={steps} />
     </div>
   );
 }
@@ -302,16 +235,12 @@ function GroupPanel({
   );
 }
 
-/**
- * The room a drop would take. Always mounted at nothing, so opening and closing
- * it is a height the browser can animate — a hole that mounts at full height
- * would jump into place instead of opening.
- */
+/** Only rows animate; changing gap heights immediately keeps the layout stable. */
 function Hole({ open, height, pull = 0 }: { open: boolean; height: number; pull?: number }) {
   // Inside a panel the hole is a flex item, so it arrives with a gap in front of
   // it whether it is open or not; the pull takes that back.
   return (
-    <div className={s.hole} style={{ height: open ? height : 0, marginTop: -pull }} aria-hidden />
+    <div data-drop-gap style={{ height: open ? height : 0, marginTop: -pull }} aria-hidden />
   );
 }
 
@@ -447,32 +376,28 @@ export function BuildDetail({
   onNavigate,
   onBack,
   onAddPart,
+  onEditSteps,
   onRenameBuild,
   onDeleteBuild,
   onLinkPart,
   onSetImage,
   onSetNote,
   onNameAssembly,
-  onLinkParts,
-  onRemoveFromGroup,
-  onReorder,
-  onReorderGroup,
+  onDrop,
   rowActions,
 }: {
   build: Build;
   onNavigate: (screen: Screen) => void;
   onBack: () => void;
   onAddPart: () => void;
+  onEditSteps: () => void;
   onRenameBuild: (name: string) => void;
   onDeleteBuild: () => void;
   onLinkPart: (id: string) => void;
   onSetImage: (image: string) => void;
   onSetNote: (note: string) => void;
   onNameAssembly: (partId: string, name: string) => void;
-  onLinkParts: (ids: string[]) => void;
-  onRemoveFromGroup: (id: string) => void;
-  onReorder: (id: string, targetId: string, before: boolean) => void;
-  onReorderGroup: (groupId: string, targetId: string, before: boolean) => void;
+  onDrop: (drop: PartDrop) => void;
   rowActions: Omit<PartActions, 'onLink'>;
 }) {
   const [stage, setStage] = useState<PartStatus | null>(null);
@@ -485,9 +410,7 @@ export function BuildDetail({
   // it lives here and every group is open again next time the build is opened.
   const [collapsed, setCollapsed] = useState<string[]>([]);
   // What is in flight: one part, or a whole assembly picked up by its head.
-  // `shut` rides along rather than living in its own state: a collapsed slot
-  // that outlived its drag would be a row nobody can see.
-  const [lift, setLift] = useState<{ kind: 'part' | 'group'; id: string; shut?: boolean } | null>(
+  const [lift, setLift] = useState<PartDrop['source'] | null>(
     null,
   );
   /** Where it would land: which row or panel, on which side, and whether it joins. */
@@ -515,6 +438,11 @@ export function BuildDetail({
     };
   }, [openMenu]);
 
+  useEffect(() => {
+    if (stage && !build.steps.some((step) => step.id === stage)) setStage(null);
+    setOpenMenu(null);
+  }, [build.steps]);
+
   const done = partsDone(build);
 
   const byGroup = useMemo(() => assemblies(build.parts), [build.parts]);
@@ -522,12 +450,60 @@ export function BuildDetail({
   // The screen owns filtering and sorting; derive turns what's left into rows.
   const kept = useMemo(() => {
     const filtered = stage ? partsAt(build.parts, stage) : build.parts;
-    return sortMode === 'progress' ? sortByProgress(filtered) : filtered;
-  }, [build.parts, stage, sortMode]);
+    return sortMode === 'progress' ? sortByProgress(filtered, build.steps) : filtered;
+  }, [build.parts, build.steps, stage, sortMode]);
 
   const actions: PartActions = { ...rowActions, onLink: onLinkPart };
 
+  // Capture the visible positions before a preview changes. Animate only the
+  // rows' transforms afterwards, never the heights used to measure drop targets.
+  const beforeLayout = useRef(new Map<HTMLElement, number>());
+  const animations = useRef<Animation[]>([]);
+  const inHand = (node: HTMLElement) => lift?.kind === 'part'
+    ? node.dataset.part === lift.id
+    : lift?.kind === 'group' && node.closest('[data-group]')?.getAttribute('data-group') === lift.id;
+  const captureLayout = () => {
+    const list = listRef.current;
+    beforeLayout.current.clear();
+    if (!list) return;
+    const top = list.getBoundingClientRect().top;
+    for (const node of list.querySelectorAll<HTMLElement>('[data-part], [data-group]')) {
+      if (!inHand(node)) beforeLayout.current.set(node, node.getBoundingClientRect().top - top);
+    }
+  };
+
+  useLayoutEffect(() => {
+    for (const animation of animations.current) animation.cancel();
+    animations.current = [];
+    const list = listRef.current;
+    const before = beforeLayout.current;
+    if (!list || !before.size) return;
+    const top = list.getBoundingClientRect().top;
+    const after = new Map([...before.keys()].filter(node => list.contains(node))
+      .map(node => [node, node.getBoundingClientRect().top - top]));
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      for (const [node, position] of after) {
+        if (inHand(node)) continue;
+        const parent = node.parentElement?.closest<HTMLElement>('[data-group]');
+        const parentShift = parent && before.has(parent) && after.has(parent)
+          ? before.get(parent)! - after.get(parent)! : 0;
+        const shift = before.get(node)! - position - parentShift;
+        if (Math.abs(shift) < 0.5) continue;
+        animations.current.push(node.animate(
+          [{ transform: `translateY(${shift}px)` }, { transform: 'translateY(0)' }],
+          { duration: 150, easing: 'ease-out' },
+        ));
+      }
+    }
+    before.clear();
+  }, [aim, lift, build.parts]);
+
+  useEffect(() => () => {
+    for (const animation of animations.current) animation.cancel();
+  }, []);
+
   const clearDrag = () => {
+    captureLayout();
     setLift(null);
     setAim(null);
   };
@@ -538,51 +514,23 @@ export function BuildDetail({
     const [kind, key, side] = id.split(':');
     if (kind === 'row') {
       const part = build.parts.find((p) => p.id === key);
-      return part ? { anchor: { kind: 'row', id: key }, before: side === 'before', joins: true } : null;
+      return part ? { target: { kind: 'part', id: key }, before: side === 'before', joins: true } : null;
     }
     if (kind === 'panel') {
-      if (side === 'in') return { anchor: { kind: 'panel', groupId: key }, before: false, joins: true };
-      return { anchor: { kind: 'panel', groupId: key }, before: side === 'above', joins: false };
+      if (side === 'in') return { target: { kind: 'group', id: key }, before: false, joins: true };
+      return { target: { kind: 'group', id: key }, before: side === 'above', joins: false };
     }
     return null;
   };
 
   /** The part a landing is measured against, and whose assembly it would join. */
   const anchorPart = (a: Aim): Part | undefined => {
-    if (a.anchor.kind === 'row') {
-      const { id } = a.anchor;
+    if (a.target.kind === 'part') {
+      const { id } = a.target;
       return build.parts.find((p) => p.id === id);
     }
-    const members = byGroup.get(a.anchor.groupId) ?? [];
+    const members = byGroup.get(a.target.id) ?? [];
     return a.before ? members[0] : members[members.length - 1];
-  };
-
-  /**
-   * A drop says two things at once: where the thing goes in the order, and which
-   * assembly it belongs to. Position is only honoured under Sort: Manual, since
-   * Progress computes it; membership always is. A group in flight only ever
-   * moves — it never joins another assembly.
-   */
-  const land = (a: Aim) => {
-    if (!lift) return;
-    const target = anchorPart(a);
-    if (!target) return;
-
-    if (lift.kind === 'group') {
-      if (target.linkGroupId === lift.id) return; // its own block: a move to nowhere
-      if (sortMode === 'manual') onReorderGroup(lift.id, target.id, a.before);
-      return;
-    }
-
-    const dragged = build.parts.find((p) => p.id === lift.id);
-    if (!dragged || dragged.id === target.id) return;
-    const landsIn = a.joins ? target.linkGroupId : undefined;
-    if (dragged.linkGroupId !== landsIn) {
-      // Leaving one assembly for another is a move, not a merge of the two.
-      if (dragged.linkGroupId) onRemoveFromGroup(dragged.id);
-      if (landsIn) onLinkParts([dragged.id, target.id]);
-    }
-    if (sortMode === 'manual') onReorder(dragged.id, target.id, a.before);
   };
 
   const onDragStart = ({ active }: DragStartEvent) => {
@@ -593,31 +541,24 @@ export function BuildDetail({
       kind === 'group' ? `[data-group="${id}"]` : `[data-part="${id}"]`,
     );
     flyingHeight.current = node?.getBoundingClientRect().height ?? 0;
+    captureLayout();
+    setOpenMenu(null);
     setLift({ kind, id });
-    // The slot has to be rendered at its own height once before it can animate
-    // down from it; collapsing in the same paint would just blink out.
-    requestAnimationFrame(() => setLift((l) => (l && l.id === id ? { ...l, shut: true } : l)));
   };
 
   const onDragOver = ({ over }: DragOverEvent) => {
+    captureLayout();
     setAim(readAim(over ? String(over.id) : null));
   };
 
   const onDragEnd = ({ over }: DragEndEvent) => {
     const a = readAim(over ? String(over.id) : null);
-    if (a) land(a);
+    if (a && lift) onDrop({ ...a, source: lift, reorder: sortMode === 'manual' });
     clearDrag();
   };
 
-  /**
-   * The aim as a move. Aiming at what you are holding is not one, and nothing
-   * about the list should change for it.
-   *
-   * This is also what keeps the list the same height all the way through a drag:
-   * the slot collapses only while a hole is open, and the two are the same size,
-   * so the page can never scroll under the drop targets — which are measured
-   * once, at lift-off, and would land a row off if it did.
-   */
+  /** Keep the source's space until there is a destination gap. Internal moves
+   * trade equal heights so neither the assembly nor its scroll position jumps. */
   const move = (() => {
     if (!lift || !aim) return null;
     const target = anchorPart(aim);
@@ -633,27 +574,29 @@ export function BuildDetail({
    */
   const lifted = (kind: 'part' | 'group', id: string, gap: number) => {
     if (lift?.kind !== kind || lift.id !== id) return undefined;
-    const shut = lift.shut && !!move;
+    const shut = !!move;
     return {
       height: shut ? 0 : flyingHeight.current,
       marginBottom: shut ? -gap : 0,
       overflow: 'hidden' as const,
+      visibility: 'hidden' as const,
     };
   };
 
   /** Does the gap belong before or after this row, and is one open at all? */
   const gapAt = (partId: string, side: 'before' | 'after') => {
-    if (!move || move.anchor.kind !== 'row') return false;
-    return move.anchor.id === partId && move.before === (side === 'before');
+    if (!move || move.target.kind !== 'part') return false;
+    return move.target.id === partId && move.before === (side === 'before');
   };
 
   const gapAtPanel = (groupId: string, side: 'above' | 'below' | 'in') => {
-    if (!move || move.anchor.kind !== 'panel' || move.anchor.groupId !== groupId) return false;
+    if (!move || move.target.kind !== 'group' || move.target.id !== groupId) return false;
     return side === 'in' ? move.joins : !move.joins && move.before === (side === 'above');
   };
 
   const shared = (part: Part) => ({
     part,
+    steps: build.steps,
     links: siblings(part, byGroup),
     menuOpen: openMenu === part.id,
     onOpenMenu: setOpenMenu,
@@ -671,7 +614,7 @@ export function BuildDetail({
       const members = byGroup.get(lift.id) ?? [];
       return (
         <div className={`${s.linkGroup} ${s.flying}`}>
-          <AssemblyHead visible={members} all={members} collapsed={false} onToggle={noop} onName={noop} />
+          <AssemblyHead steps={build.steps} visible={members} all={members} collapsed={false} onToggle={noop} onName={noop} />
           {members.map((m) => (
             <PartRow key={m.id} {...shared(m)} overlay />
           ))}
@@ -703,6 +646,7 @@ export function BuildDetail({
           groupId={groupId}
           head={(handle) => (
             <AssemblyHead
+              steps={build.steps}
               visible={run}
               all={byGroup.get(groupId) ?? run}
               collapsed={isShut}
@@ -780,12 +724,16 @@ export function BuildDetail({
               <div className={s.figureKicker}>PARTS DONE</div>
             </div>
           </div>
-          <StageFlow parts={build.parts} picked={stage} onPick={setStage} />
+          <div className={s.flowHeading}>
+            <span className={s.figureKicker}>STEPS · PARTS NEEDING THIS WORK</span>
+            <button className={s.sortToggle} onClick={onEditSteps}>Edit steps</button>
+          </div>
+          <StageFlow steps={build.steps} parts={build.parts} picked={stage} onPick={setStage} />
         </div>
 
         <div className={s.filterRow}>
           <span style={{ fontWeight: 700, fontSize: 17 }}>
-            {stage ? `${stepName(stage)} — ${kept.length}` : `Parts — ${build.parts.length}`}
+            {stage ? `${stepName(stage, build.steps)} — ${kept.length}` : `Parts — ${build.parts.length}`}
           </span>
           <div className={s.filters}>
             <button

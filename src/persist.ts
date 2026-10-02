@@ -1,12 +1,13 @@
 // The workshop copy: turning a stored blob into state we trust, and deciding
 // when a change is owed to the cloud. Kept out of `store.ts` — and free of React
 // and Supabase imports — so `npm run check` can reach it. See ADR-0004.
-import type { Build, PartStatus, State } from './types.ts';
+import type { Build, State } from './types.ts';
+import { defaultSteps, validateSteps } from './derive.ts';
 import { seedState } from './seed.ts';
 
 /** The `smoothing` stage was renamed `sanding`; copies stored before that still say it. */
-const normalizePartStatus = (status: string): PartStatus =>
-  status === 'smoothing' ? 'sanding' : (status as PartStatus);
+const normalizePartStatus = (status: string): string =>
+  status === 'queued' ? 'printing' : status === 'smoothing' ? 'sanding' : status;
 
 /**
  * A stored blob migrated into the shape this version expects. There is no
@@ -18,13 +19,19 @@ export function normalizeState(state: State): State {
     ...state,
     // `deadline` was deleted with the whole idea of a date on a build (ADR-0006);
     // the rest pattern drops it from copies still carrying it.
-    builds: state.builds.map(({ deadline: _gone, ...build }: Build & { deadline?: string }) => ({
-      ...build,
-      parts: build.parts.map((part) => ({
-        ...part,
-        status: normalizePartStatus(part.status),
-      })),
-    })),
+    builds: state.builds.map(({ deadline: _gone, ...build }: Build & { deadline?: string }) => {
+      const legacy = build.steps === undefined;
+      const steps = legacy ? defaultSteps() : build.steps;
+      validateSteps(steps);
+      const parts = build.parts.map((part) => {
+        const status = legacy ? normalizePartStatus(part.status) : part.status;
+        if (!steps.some((step) => step.id === status)) {
+          throw new Error(`Part ${part.id} refers to a missing step.`);
+        }
+        return { ...part, status };
+      });
+      return { ...build, steps, parts };
+    }),
   };
 }
 

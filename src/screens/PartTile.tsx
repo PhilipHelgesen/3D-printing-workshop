@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import type { Part } from '../types.ts';
-import { STATUS_LABEL, STATUS_TOKENS, assemblyBadge } from '../derive.ts';
+import { useState, type CSSProperties } from 'react';
+import type { Part, Step } from '../types.ts';
+import { stepName, stepTokens, assemblyBadge } from '../derive.ts';
 import { AdvanceMenu, LinkIcon, menuPlace, type PartActions } from './AdvanceMenu.tsx';
 import s from './build.module.css';
 
@@ -14,20 +14,22 @@ import s from './build.module.css';
  */
 export function PartTile({
   part,
+  steps,
   links,
   menuOpen,
   onOpenMenu,
   actions,
 }: {
   part: Part;
+  steps: Step[];
   links: Part[];
   menuOpen: boolean;
   onOpenMenu: (id: string | null) => void;
   actions: PartActions;
 }) {
-  const token = STATUS_TOKENS[part.status];
-  const badge = assemblyBadge(part, links);
-  const [place, setPlace] = useState('');
+  const token = stepTokens(part.status, steps);
+  const badge = assemblyBadge(part, links, steps);
+  const [place, setPlace] = useState<CSSProperties>({});
 
   return (
     <div className={s.tileWrap}>
@@ -37,13 +39,13 @@ export function PartTile({
         aria-expanded={menuOpen}
         onClick={(e) => {
           e.stopPropagation();
-          if (!menuOpen) setPlace(menuPlace(e.currentTarget));
+          if (!menuOpen) setPlace(menuPlace(e.currentTarget, steps.length));
           onOpenMenu(menuOpen ? null : part.id);
         }}
       >
         <span className={s.tileHead}>
           <span className={s.tileDot} style={{ background: token.solid }} />
-          <span className={s.tileStatus}>{STATUS_LABEL[part.status]}</span>
+          <span className={s.tileStatus}>{stepName(part.status, steps).toUpperCase()}</span>
           {badge && (
             <span
               className={`${s.linkBadge} ${s.tileBadge} ${badge.inStep ? '' : s.linkBadgeOff}`}
@@ -59,6 +61,7 @@ export function PartTile({
       {menuOpen && (
         <AdvanceMenu
           part={part}
+          steps={steps}
           links={links}
           place={place}
           actions={actions}

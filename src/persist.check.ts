@@ -1,7 +1,7 @@
 // Self-check for the workshop copy: how a stored blob becomes state we trust,
 // and when a change is owed to the cloud. Run by `npm run check`.
 import assert from 'node:assert/strict';
-import type { Build, PartStatus } from './types.ts';
+import type { Build } from './types.ts';
 import { normalizeState, parseStored, shouldSkipPush } from './persist.ts';
 import { seedState } from './seed.ts';
 
@@ -9,12 +9,26 @@ const now = Date.UTC(2026, 7, 13, 9, 0, 0);
 const fresh = seedState(now);
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+// Legacy builds gain their own default steps; Queue moves to Print without
+// losing parts, names, notes, assemblies, or completion.
+const legacy = JSON.parse(JSON.stringify(fresh));
+for (const build of legacy.builds) delete build.steps;
+legacy.builds[0].parts[0].status = 'queued';
+const upgraded = normalizeState(legacy);
+assert.deepEqual(upgraded.builds[0].steps.map((step) => step.id),
+  ['printing', 'sanding', 'priming', 'painting', 'assembling', 'done']);
+assert.equal(upgraded.builds[0].parts[0].status, 'printing');
+assert.equal(upgraded.builds[0].parts.length, fresh.builds[0].parts.length);
+assert.equal(upgraded.builds[0].parts.at(-1)?.status, 'done');
+assert.deepEqual(normalizeState(upgraded), upgraded, 'migration is idempotent');
+
 // —— a copy written by an older version ——
 // `smoothing` was renamed to `sanding`. A blob stored before that rename still
 // says the old name, and there is no ALTER TABLE for a JSON blob (ADR-0001), so
 // the migration runs here, on read.
 const old = clone(fresh);
-old.builds[0].parts[0].status = 'smoothing' as PartStatus;
+delete (old.builds[0] as Partial<Build>).steps;
+old.builds[0].parts[0].status = 'smoothing';
 
 const migrated = normalizeState(old);
 assert.equal(migrated.builds[0].parts[0].status, 'sanding');
@@ -63,5 +77,13 @@ assert.equal(shouldSkipPush(json, json), true);
 assert.equal(shouldSkipPush('', json), false);
 // The cloud is behind.
 assert.equal(shouldSkipPush('{"an":"older copy"}', json), false);
+
+
+// A saved custom step's ID is not a legacy status to rename.
+const custom = clone(fresh);
+custom.builds[0].steps.splice(1, 0, { id: 'smoothing', name: 'Graphite after gloss', color: 'stone' });
+custom.builds[0].parts[0].status = 'smoothing';
+assert.equal(normalizeState(custom).builds[0].parts[0].status, 'smoothing');
+assert.deepEqual(parseStored(JSON.stringify(custom)), custom);
 
 console.log('persist: ok');

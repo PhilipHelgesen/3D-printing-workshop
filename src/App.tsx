@@ -9,6 +9,7 @@ import { Dashboard } from './screens/Dashboard.tsx';
 import { BuildDetail } from './screens/BuildDetail.tsx';
 import { Toolbox } from './screens/Toolbox.tsx';
 import { ToolboxModal } from './screens/ToolboxModal.tsx';
+import { StepsModal } from './screens/StepsModal.tsx';
 import { AddPartModal } from './screens/AddPartModal.tsx';
 import { LinkPartModal } from './screens/LinkPartModal.tsx';
 import { DeleteBuildModal } from './screens/DeleteBuildModal.tsx';
@@ -48,6 +49,7 @@ function Workshop() {
   const [screen, setScreen] = useState<Screen>('dashboard');
   const [openBuildId, setOpenBuildId] = useState<string | null>(null);
   const [entryModal, setEntryModal] = useState<{ entry: ToolboxEntry; isNew: boolean } | null>(null);
+  const [editingSteps, setEditingSteps] = useState(false);
   const [addingPart, setAddingPart] = useState(false);
   const [linkingPartId, setLinkingPartId] = useState<string | null>(null);
   const [deletingBuild, setDeletingBuild] = useState(false);
@@ -91,16 +93,14 @@ function Workshop() {
             onNavigate={navigate}
             onBack={() => setOpenBuildId(null)}
             onAddPart={() => setAddingPart(true)}
+            onEditSteps={() => setEditingSteps(true)}
             onRenameBuild={(name) => store.renameBuild(openBuild.id, name)}
             onDeleteBuild={() => setDeletingBuild(true)}
             onLinkPart={setLinkingPartId}
             onSetImage={(image) => store.setBuildImage(openBuild.id, image)}
             onSetNote={(note) => store.setBuildNote(openBuild.id, note)}
             onNameAssembly={store.nameAssembly}
-            onLinkParts={store.linkParts}
-            onRemoveFromGroup={store.removeFromGroup}
-            onReorder={store.reorderPart}
-            onReorderGroup={store.reorderGroup}
+            onDrop={store.dropParts}
             rowActions={rowActions}
           />
         ) : (
@@ -135,6 +135,15 @@ function Workshop() {
         />
       )}
 
+      {editingSteps && openBuild && (
+        <StepsModal build={openBuild}
+          onSave={(steps, replacements) => {
+            store.saveSteps(openBuild.id, steps, replacements);
+            setEditingSteps(false);
+          }}
+          onClose={() => setEditingSteps(false)} />
+      )}
+
       {addingPart && openBuild && (
         <AddPartModal
           onAdd={(name, note) => {
@@ -148,6 +157,7 @@ function Workshop() {
       {linkingPart && openBuild && (
         <LinkPartModal
           part={linkingPart}
+          steps={openBuild.steps}
           members={members}
           candidates={linkCandidates(linkingPart, openBuild.parts)}
           onAdd={(newIds) => store.linkParts([linkingPart.id, ...members.map((m) => m.id), ...newIds])}

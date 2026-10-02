@@ -1,13 +1,12 @@
-export type PartStatus =
-  | 'queued'
-  | 'printing'
-  | 'sanding'
-  | 'priming'
-  | 'painting'
-  | 'assembling'
-  | 'done';
-// NOTE: there is deliberately NO 'failed' status. If a part breaks the maker
-// moves it back to 'queued'. Do not add a failure state.
+/** A part's status is the ID of a step in its build. */
+export type PartStatus = string;
+export type StepColor = 'sea' | 'neutral' | 'olive' | 'lemon' | 'indigo' | 'stone' | 'terra' | 'rose' | 'violet' | 'apricot' | 'basil';
+
+export interface Step {
+  id: string;
+  name: string;
+  color: StepColor;
+}
 
 export interface Part {
   id: string;
@@ -28,6 +27,7 @@ export interface Build {
   /** A picture of the thing being made — usually the model listing's render at first. */
   image?: string;
   note?: string;
+  steps: Step[];
   parts: Part[];
 }
 // NOTE: there is deliberately NO `deadline`. The old one had no writer and only

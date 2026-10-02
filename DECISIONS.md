@@ -1,5 +1,27 @@
 # Nozzle — build decisions
 
+## Build-specific step editor, refinement started 2026-10-01
+
+Implemented design. Build ownership, completion, defaults and
+deletion rules are recorded in [ADR-0007](docs/adr/0007-build-specific-steps.md).
+
+- An Edit steps button beside the build's step visualization opens one modal.
+- The modal uses the same horizontal visualization, not a vertical list.
+  Steps can be dragged or moved with left/right buttons; Done stays fixed last.
+- Add, delete, rename and recolor work steps in this modal.
+- Choose colors from preset swatches based on the app's palette. Green remains
+  reserved for Done.
+- Save applies all edits and any part reassignment together. Cancel, Escape or
+  closing the modal discards unsaved changes.
+- Repeated operations are separate steps, with distinguishable names such as
+  Graphite after gloss and Graphite after clear coat.
+- Remove the dashboard batching suggestion beneath the greeting. The maker
+  does not read it; no replacement suggestion is requested.
+
+Design confirmed on 2026-10-01. Changes are implemented locally and uncommitted.
+
+## Original implementation decisions
+
 Agreed before implementation started. Source design: `design_handoff_nozzle/`.
 
 | Decision | Choice |

@@ -1,4 +1,5 @@
-import type { Build, Part, PartStatus, State, ToolboxEntry } from './types.ts';
+import { defaultSteps, validateSteps } from './derive.ts';
+import type { Build, Part, PartStatus, State, Step, ToolboxEntry } from './types.ts';
 
 /**
  * Every way the workshop can change, as plain `(state, args) => state`.
@@ -38,7 +39,9 @@ function pruneLoneGroups(parts: Part[]): Part[] {
 // ——— parts ———
 
 export const moveTo = (state: State, id: string, status: PartStatus): State =>
-  mapParts(state, only([id], (p) => ({ ...p, status, updatedAt: now() })));
+  mapBuilds(state, (b) => b.steps.some((step) => step.id === status)
+    ? { ...b, parts: b.parts.map(only([id], (p) => ({ ...p, status, updatedAt: now() }))) }
+    : b);
 
 export const renamePart = (state: State, id: string, name: string): State =>
   mapParts(state, only([id], (p) => ({ ...p, name })));
@@ -52,7 +55,7 @@ export const addPart = (state: State, buildId: string, name: string, note?: stri
       ? {
           ...b,
           parts: [
-            { id: crypto.randomUUID(), buildId, name, note, status: 'queued', updatedAt: now() },
+            { id: crypto.randomUUID(), buildId, name, note, status: b.steps[0].id, updatedAt: now() },
             ...b.parts,
           ],
         }
@@ -99,6 +102,41 @@ export function reorderGroup(
     rest.splice(before ? at : at + 1, 0, ...block);
     return { ...b, parts: rest };
   });
+}
+
+export interface PartDrop {
+  source: { kind: 'part' | 'group'; id: string };
+  target: { kind: 'part' | 'group'; id: string };
+  before: boolean;
+  joins: boolean;
+  reorder: boolean;
+}
+
+/** A drop transfers one part, or moves an assembly, in one workshop change. */
+export function dropParts(state: State, drop: PartDrop): State {
+  const { source, target, before, joins, reorder } = drop;
+  const build = state.builds.find(b => b.parts.some(p =>
+    source.kind === 'part' ? p.id === source.id : p.linkGroupId === source.id));
+  if (!build) return state;
+  const targets = build.parts.filter(p =>
+    target.kind === 'part' ? p.id === target.id : p.linkGroupId === target.id);
+  const anchor = before ? targets[0] : targets[targets.length - 1];
+  if (!anchor) return state;
+  if (source.kind === 'group') {
+    return reorder && anchor.linkGroupId !== source.id
+      ? reorderGroup(state, source.id, anchor.id, before)
+      : state;
+  }
+  if (source.id === anchor.id) return state;
+  const dragged = build.parts.find(p => p.id === source.id)!;
+  const landsIn = joins ? anchor.linkGroupId : undefined;
+  let next = state;
+  if (dragged.linkGroupId !== landsIn) {
+    // Remove first: linking a member still in its old assembly would merge both.
+    if (dragged.linkGroupId) next = removeFromGroup(next, dragged.id);
+    if (landsIn) next = linkParts(next, [dragged.id, anchor.id]);
+  }
+  return reorder ? reorderPart(next, dragged.id, anchor.id, before) : next;
 }
 
 export const deletePart = (state: State, id: string): State =>
@@ -153,8 +191,46 @@ export const removeFromGroup = (state: State, id: string): State =>
 
 export const addBuild = (state: State, name: string): State => ({
   ...state,
-  builds: [...state.builds, { id: crypto.randomUUID(), name, startedAt: now(), parts: [] }],
+  builds: [...state.builds, { id: crypto.randomUUID(), name, startedAt: now(), steps: defaultSteps(), parts: [] }],
 });
+
+/** Apply a workflow edit atomically; an occupied deleted step needs a valid destination. */
+export function editBuildSteps(build: Build, steps: Step[], replacements: Record<string, string>): Build {
+  validateSteps(steps);
+  const present = new Set(steps.map((step) => step.id));
+  const parts = build.parts.map((part) => {
+    if (present.has(part.status)) return part;
+    const status = replacements[part.status];
+    if (!present.has(status)) throw new Error('Choose a replacement for every occupied deleted step.');
+    return { ...part, status, updatedAt: now() };
+  });
+  return { ...build, steps: steps.map((step) => ({ ...step, name: step.name.trim() })), parts };
+}
+
+export const saveSteps = (state: State, buildId: string, steps: Step[], replacements: Record<string, string>): State =>
+  mapBuilds(state, (build) => build.id === buildId ? editBuildSteps(build, steps, replacements) : build);
+
+/** Final destinations after any chain of occupied-step deletions in an editor draft. */
+export function stepReplacements(original: Build, draft: Build): Record<string, string> {
+  const statuses = new Map(draft.parts.map((part) => [part.id, part.status]));
+  const replacements: Record<string, string> = {};
+  for (const part of original.parts) {
+    const status = statuses.get(part.id);
+    if (status && status !== part.status) replacements[part.status] = status;
+  }
+  return replacements;
+}
+
+/** Reorder work steps only; Done stays at the end. Also used by the modal's arrow buttons. */
+export function reorderStep(steps: Step[], id: string, targetId: string): Step[] {
+  const from = steps.findIndex((step) => step.id === id);
+  const to = steps.findIndex((step) => step.id === targetId);
+  if (from < 0 || to < 0 || id === 'done' || targetId === 'done') return steps;
+  const reordered = [...steps];
+  const [step] = reordered.splice(from, 1);
+  reordered.splice(to, 0, step);
+  return reordered;
+}
 
 export const renameBuild = (state: State, id: string, name: string): State =>
   mapBuilds(state, (b) => (b.id === id ? { ...b, name } : b));

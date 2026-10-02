@@ -104,12 +104,15 @@
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  height: 96px;
+  min-height: 96px;
+  overflow-x: auto;
+  padding: 4px;
   margin-top: 20px;
 }
 
 .stage {
-  flex: 1;
+  flex: 1 0 84px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -167,6 +170,8 @@
   letter-spacing: 0.05em;
   color: var(--ink);
   text-align: center;
+  overflow-wrap: anywhere;
+  max-width: 140px;
 }
 
 /* A stage with nothing at it can't be picked, and reads that way. */
@@ -272,27 +277,10 @@
   border-radius: var(--radius-card);
 }
 
-/*
- * One row's worth of list, holding the row and the room a drop would take on
- * either side of it. Lifting a row collapses its slot; aiming at a seam opens
- * the hole there, and everything below really slides down to make room.
- *
- * Both are safe because the drop targets are measured once, at lift-off, and
- * never again: the rectangles the pointer is tested against stay where the list
- * started, so no amount of sliding can move a target out from under the aim.
- * (Re-measuring to keep up re-runs the layout that made it stale, and never
- * settles — that is what the frozen rectangles buy.)
- */
+/* Layout sizes change immediately; rows animate their transforms in BuildDetail.
+   Animating both source and gap heights makes an assembly expand and shrink. */
 .slot {
   position: relative;
-  transition:
-    height 150ms ease,
-    margin-bottom 150ms ease;
-}
-
-/* The room a drop would take, opening where it would land. */
-.hole {
-  transition: height 150ms ease;
 }
 
 /*
@@ -308,25 +296,38 @@
   pointer-events: none;
 }
 
+/* Cover half the spacing too, so crossing between rows never clears the aim. */
 .halfTop {
-  top: 0;
+  top: -6px;
+  height: calc(50% + 6px);
 }
 
 .halfBottom {
-  bottom: 0;
+  bottom: -6px;
+  height: calc(50% + 6px);
+}
+
+.linkGroup .halfTop {
+  top: -2px;
+  height: calc(50% + 2px);
+}
+
+.linkGroup .halfBottom {
+  bottom: -2px;
+  height: calc(50% + 2px);
 }
 
 .edgeTop,
 .edgeBottom {
-  height: 10px;
+  height: 16px;
 }
 
 .edgeTop {
-  top: 0;
+  top: -6px;
 }
 
 .edgeBottom {
-  bottom: 0;
+  bottom: -6px;
 }
 
 .check {
@@ -440,21 +441,13 @@
 }
 
 .menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  position: fixed;
   z-index: 5;
   width: 268px;
   background: var(--surface);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-menu);
   padding: 8px;
-}
-
-/* No room below the button — the menu opens upward rather than off the window. */
-.menuUp {
-  top: auto;
-  bottom: calc(100% + 4px);
 }
 
 .menuKicker {
@@ -661,12 +654,6 @@
   line-height: 1.25;
 }
 
-/* A tile is narrower than the menu, so the menu hangs from a corner with room. */
-.menuLeft {
-  right: auto;
-  left: 0;
-}
-
 .empty {
   font: 400 12px var(--font-mono);
   color: var(--muted);
@@ -763,7 +750,7 @@
   outline-offset: 1px;
 }
 
-/* The same seven positions as the chart above, at header scale. */
+/* The build's step positions at header scale. */
 .miniFlow {
   margin-left: auto;
   display: flex;
@@ -786,4 +773,103 @@
 
 .miniFlow .stageBar {
   gap: 1.5px;
+}
+
+.flowHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.editorFlow {
+  min-height: 126px;
+  margin-top: 8px;
+  padding: 6px;
+}
+
+.editorStage {
+  flex: 1 0 100px;
+  min-width: 0;
+  position: relative;
+  text-align: center;
+  border-radius: 12px;
+}
+
+.editorStage .stage {
+  width: 100%;
+}
+
+.editorOver {
+  outline: 2px solid var(--sea);
+}
+
+.stepHandle {
+  touch-action: none;
+  cursor: grab;
+  border: none;
+  background: var(--field);
+  color: var(--muted);
+  border-radius: var(--radius-chip);
+  padding: 3px 14px;
+  margin-top: 3px;
+  font-size: 16px;
+}
+
+.fixedStep {
+  display: block;
+  font: 400 10px var(--font-mono);
+  color: var(--muted);
+  margin: 8px 0;
+}
+
+.stepFields {
+  border-top: 1px solid var(--hairline);
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.stepFields > label {
+  display: block;
+}
+
+.stepSwatches,
+.stepActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+
+.stepActions {
+  margin-top: 18px;
+}
+
+.colorSwatch {
+  width: 44px;
+  height: 44px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-icon);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.colorSwatch span {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.stepDeletion {
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--field);
+  border-radius: var(--radius-field);
+  font: 400 13px/1.5 var(--font-sans);
+}
+
+.stepDeletion p {
+  margin-top: 0;
 }
